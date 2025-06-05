@@ -1,8 +1,10 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
 const Permission = require('../models/Permission');
 const Role = require('../models/Role');
+const User = require('../models/User');
 
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/yourdb';
 
@@ -16,12 +18,18 @@ async function seed() {
 
         await Permission.deleteMany({});
         await Role.deleteMany({});
+        await User.deleteMany({});
 
         // 1. Insert all permissions with full actions
         const permissionsData = [
-            { route: '/api/users', actions: ['view', 'update', 'delete'] },
-            { route: '/api/posts', actions: ['view', 'update', 'delete'] },
-            { route: '/api/comments', actions: ['view', 'delete'] },
+            { name: 'dashboard', route: '/api/dashboard', actions: ['view'] },
+            { name: 'users', route: '/api/users', actions: ['view', 'update', 'delete'] },
+            { name: 'roles', route: '/api/roles', actions: ['view', 'update', 'delete'] },
+            { name: 'employees', route: '/api/employees', actions: ['view', 'update', 'delete'] },
+            { name: 'recruiting', route: '/api/recruiting', actions: ['view', 'update', 'delete'] },
+            { name: 'jobs', route: '/api/jobs', actions: ['view', 'update', 'delete'] },
+            { name: 'job-applications', route: '/api/job-applications', actions: ['view', 'update', 'delete'] },
+            { name: 'post', route: '/api/posts', actions: ['view', 'update', 'delete'] },
         ];
 
         const permissions = await Permission.insertMany(permissionsData);
@@ -35,7 +43,7 @@ async function seed() {
                 name: 'admin',
                 permissions: permissions.map(p => ({
                     permissionId: p._id,
-                    actions: p.actions, // admin has all actions on all permissions
+                    actions: p.actions,
                 })),
             },
             {
@@ -43,11 +51,11 @@ async function seed() {
                 permissions: [
                     {
                         permissionId: getPermissionByRoute('/api/posts')._id,
-                        actions: ['view', 'update', 'delete'], // full on posts
+                        actions: ['view', 'update', 'delete'],
                     },
                     {
-                        permissionId: getPermissionByRoute('/api/comments')._id,
-                        actions: ['view', 'delete'], // full on comments
+                        permissionId: getPermissionByRoute('/api/dashboard')._id,
+                        actions: ['view'],
                     },
                 ],
             },
@@ -56,11 +64,12 @@ async function seed() {
                 permissions: [
                     {
                         permissionId: getPermissionByRoute('/api/posts')._id,
-                        actions: ['view'], // only view posts
+                        actions: ['view'],
                     },
                     {
-                        permissionId: getPermissionByRoute('/api/comments')._id,
-                        actions: ['view'], // only view comments
+                        // This permission does not exist, remove or add '/api/comments' to permissionsData above
+                        permissionId: getPermissionByRoute('/api/dashboard')._id,
+                        actions: ['view'],
                     },
                 ],
             },
@@ -68,8 +77,21 @@ async function seed() {
 
         const roles = await Role.insertMany(rolesData);
 
+        // 3. Add admin user
+        const adminRole = roles.find(r => r.name === 'admin');
+        // const hashedPassword = $2b$10$0QWgqtgBqwX3hawy5EHWKOK51ePrH4s.PdbJhKqoPUuzE7OCBON1C;
+
+        const adminUser = await User.create({
+            username: 'admin',
+            email: 'admin@gmail.com',
+            password: 'admin123',
+            role: adminRole._id,
+            isActive: true,
+        });
+
         console.log('Permissions seeded:', permissions);
         console.log('Roles seeded:', roles);
+        console.log('Admin user seeded:', adminUser);
 
         mongoose.disconnect();
         console.log('Seeding complete');

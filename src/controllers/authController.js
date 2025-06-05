@@ -76,16 +76,12 @@ exports.accessToken = async (req, res) => {
     const { id } = req.params;
 
     try {
-        console.log(id);
-
         const user = await User.findById(id).populate({
             path: 'role',
             populate: {
                 path: 'permissions.permissionId',
             },
         });
-
-        console.log(user);
 
 
         if (!user) {
