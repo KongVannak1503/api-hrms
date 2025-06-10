@@ -15,8 +15,17 @@ router.post(
     authController.login
 );
 router.get('/access/:id', authController.accessToken);
-
-router.get('/users', protect, protectRoute('view'), (req, res) => {
+router.post('/refresh-token', authController.refreshToken);
+router.post('/logout', authController.logout);
+router.get(
+    '/',
+    protect,
+    protectRoute('view'),
+    async (req, res) => {
+        res.status(200).json({ message: 'Access granted!', user: req.user });
+    }
+);
+router.get('/users', protect, protectRoute('edit'), (req, res) => {
     res.json({ status: 'success' });
 });
 

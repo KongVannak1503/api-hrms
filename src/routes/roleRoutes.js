@@ -1,11 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const roleController = require('../controllers/roleController');
+const { protect } = require('../middleware/authMiddleware');
+const protectRoute = require('../middleware/protectRouteMiddleware');
 
-router.post('/', roleController.createRole);
-router.get('/', roleController.getRoles);
-router.get('/:id', roleController.getRoleById);
-router.put('/:id', roleController.updateRole);
-router.delete('/:id', roleController.deleteRole);
+// Place the specific route before the param route to avoid conflicts
+router.get('/check/:name', roleController.checkName);
+
+router.post('/', protect, roleController.createRole);
+router.get('/', protect, roleController.getRoles);
+router.get('/:id', protect, roleController.getRoleById);
+router.put('/:id', protect, roleController.updateRole);
+router.delete('/:id', protect, protectRoute('delete'), roleController.deleteRole);
 
 module.exports = router;

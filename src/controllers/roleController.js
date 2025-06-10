@@ -25,6 +25,8 @@ exports.createRole = async (req, res) => {
         const savedRole = await newRole.save();
         // res.status(201).json({ message: 'Role created successfully' });
         res.status(201).json({ message: 'Role created successfully', data: savedRole });
+        console.log(savedRole);
+
     } catch (error) {
         console.error('Error creating role:', error);
         if (error.code === 11000) {
@@ -88,6 +90,20 @@ exports.deleteRole = async (req, res) => {
         const role = await Role.findByIdAndDelete(req.params.id);
         if (!role) return res.status(404).json({ message: 'Role not found' });
         res.json({ message: 'Role deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+exports.checkName = async (req, res) => {
+    const { name } = req.params;
+    try {
+        const role = await Role.findOne({ name });
+        if (role) {
+            return res.json({ exists: true });
+        } else {
+            return res.json({ exists: false });
+        }
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
