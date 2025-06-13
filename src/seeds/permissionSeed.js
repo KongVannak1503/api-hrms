@@ -23,13 +23,16 @@ async function seed() {
         // 1. Insert all permissions with full actions
         const permissionsData = [
             { name: 'dashboard', route: '/api/dashboard', actions: ['view'] },
-            { name: 'users', route: '/api/users', actions: ['view', 'update', 'delete'] },
-            { name: 'roles', route: '/api/roles', actions: ['view', 'update', 'delete'] },
-            { name: 'employees', route: '/api/employees', actions: ['view', 'update', 'delete'] },
-            { name: 'recruiting', route: '/api/recruiting', actions: ['view', 'update', 'delete'] },
-            { name: 'jobs', route: '/api/jobs', actions: ['view', 'update', 'delete'] },
-            { name: 'job-applications', route: '/api/job-applications', actions: ['view', 'update', 'delete'] },
-            { name: 'post', route: '/api/posts', actions: ['view', 'update', 'delete'] },
+            { name: 'users', route: '/api/users', actions: ['view', 'create', 'update', 'delete'] },
+            { name: 'roles', route: '/api/roles', actions: ['view', 'create', 'update', 'delete'] },
+            { name: 'categories', route: '/api/categories', actions: ['view', 'create', 'update', 'delete'] },
+            { name: 'positions', route: '/api/positions', actions: ['view', 'create', 'update', 'delete'] },
+            { name: 'skills', route: '/api/skills', actions: ['view', 'create', 'update', 'delete'] },
+            { name: 'employees', route: '/api/employees', actions: ['view', 'create', 'update', 'delete'] },
+            { name: 'recruiting', route: '/api/recruiting', actions: ['view', 'create', 'update', 'delete'] },
+            { name: 'jobs', route: '/api/jobs', actions: ['view', 'create', 'update', 'delete'] },
+            { name: 'job-applications', route: '/api/job-applications', actions: ['view', 'create', 'update', 'delete'] },
+            { name: 'post', route: '/api/posts', actions: ['view', 'create', 'update', 'delete'] },
         ];
 
         const permissions = await Permission.insertMany(permissionsData);
@@ -51,7 +54,7 @@ async function seed() {
                 permissions: [
                     {
                         permissionId: getPermissionByRoute('/api/posts')._id,
-                        actions: ['view', 'update', 'delete'],
+                        actions: ['view', 'create', 'update', 'delete'],
                     },
                     {
                         permissionId: getPermissionByRoute('/api/dashboard')._id,

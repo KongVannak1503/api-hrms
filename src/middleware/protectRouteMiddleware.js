@@ -7,7 +7,6 @@ const normalizeRoute = (route) => {
 const protectRoute = (requiredAction) => {
     return async (req, res, next) => {
         try {
-            console.log(requiredAction);
 
             const userRoleId = req.user?.role;
 
@@ -22,12 +21,10 @@ const protectRoute = (requiredAction) => {
             }
 
             const currentRoute = normalizeRoute(req.originalUrl.split('?')[0]);
-            console.log('🔍 Current Route:', currentRoute);
 
             const permissionForRoute = role.permissions.find(p => {
                 if (!p.permissionId || !p.permissionId.route) return false;
                 const permissionRoute = normalizeRoute(p.permissionId.route);
-                console.log('🔐 Checking Permission Route:', permissionRoute);
                 return currentRoute.startsWith(permissionRoute);
             });
 

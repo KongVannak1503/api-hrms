@@ -10,7 +10,7 @@ router.get('/check/:name', roleController.checkName);
 router.post('/', protect, roleController.createRole);
 router.get('/', protect, roleController.getRoles);
 router.get('/:id', protect, roleController.getRoleById);
-router.put('/:id', protect, roleController.updateRole);
+router.put('/:id', protect, protectRoute('update'), roleController.updateRole);
 router.delete('/:id', protect, protectRoute('delete'), roleController.deleteRole);
 
 module.exports = router;

@@ -3,7 +3,7 @@ const Role = require('../models/Role');
 // Create a new role
 exports.createRole = async (req, res) => {
     try {
-        const { name, permissions, createdBy } = req.body;
+        const { name, permissions } = req.body;
 
         // Basic validation
         if (!name || !Array.isArray(permissions)) {
@@ -17,9 +17,8 @@ exports.createRole = async (req, res) => {
                 permissionId: p.permissionId,
                 actions: p.actions,
                 isActive: p.isActive ?? true,
-                createdBy,
-                updatedBy: [],
-            }))
+            })),
+            createdBy: req.user.id
         });
 
         const savedRole = await newRole.save();
@@ -60,7 +59,7 @@ exports.getRoleById = async (req, res) => {
 // Update role
 exports.updateRole = async (req, res) => {
     try {
-        const { name, permissions, updatedBy } = req.body;
+        const { name, permissions } = req.body;
         const { id } = req.params; // Role ID from URL
 
         const updatedRole = await Role.findByIdAndUpdate(
@@ -68,7 +67,7 @@ exports.updateRole = async (req, res) => {
             {
                 name,
                 permissions,
-                $push: { updatedBy: { $each: updatedBy } }, // Add to updatedBy array
+                updatedBy: req.user.id,
             },
             { new: true, runValidators: true }
         );

@@ -11,9 +11,12 @@ const signToken = (id) => {
 
 exports.register = async (req, res) => {
     try {
-        const { username, email, password } = req.body;
+        const { username, email, employeeId, role, password } = req.body;
+        console.log(req.body);
 
-        if (!username || !email || !password) {
+        if (!username || !email || !password || !role) {
+            console.log("error");
+
             return res.status(400).json({ message: 'All fields are required' });
         }
 
@@ -22,7 +25,7 @@ exports.register = async (req, res) => {
             return res.status(400).json({ message: 'Email already in use' });
         }
 
-        const user = new User({ username, email, password });
+        const user = new User({ username, email, employeeId, role, password });
 
         await user.save(); // Password will be hashed automatically by the model
 
@@ -32,6 +35,8 @@ exports.register = async (req, res) => {
                 user: {
                     id: user._id,
                     username: user.username,
+                    employeeId: user.employeeId,
+                    role: user.role,
                     email: user.email,
                 },
             },
@@ -56,7 +61,7 @@ exports.login = async (req, res) => {
 
     try {
         const user = await User.findOne({ username });
-        if (!user) return res.status(400).json({ message: 'Invalid credentials' });
+        if (!user || !user.isActive) return res.status(400).json({ message: 'Invalid credentials' });
 
         const isMatch = await user.correctPassword(password);
         if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
