@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const categorySchema = new mongoose.Schema({
+const skillSchema = new mongoose.Schema({
     title: { type: String, required: true, unique: true },
     description: { type: String },
     isActive: { type: Boolean, default: true },
@@ -8,4 +8,4 @@ const categorySchema = new mongoose.Schema({
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 
-module.exports = mongoose.model('Category', categorySchema);
+module.exports = mongoose.model('Skill', skillSchema);

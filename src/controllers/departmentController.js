@@ -1,71 +1,71 @@
-const Category = require("../models/Category");
+const Department = require("../models/Department");
 
 // Get all 
-exports.getCategories = async (req, res) => {
+exports.getDepartments = async (req, res) => {
     try {
-        const getCategories = await Category.find().populate('createdBy', 'username');
-        res.json(getCategories);
+        const getDepartments = await Department.find().populate('createdBy', 'username');
+        res.json(getDepartments);
     } catch (error) {
         console.error('Error:', error.message);
         res.status(500).json({ message: err.message });
     }
 };
 
-exports.getCategory = async (req, res) => {
+exports.getDepartment = async (req, res) => {
     const { id } = req.params;
     try {
-        const getCategory = await Category.findById(id);
-        if (!getCategory) return res.status(404).json({ message: "Category not found" });
-        res.json(getCategory);
+        const getDepartment = await Department.findById(id);
+        if (!getDepartment) return res.status(404).json({ message: "Department not found" });
+        res.json(getDepartment);
     } catch (error) {
         console.error('Error:', error.message);
         res.status(500).json({ message: err.message });
     }
 }
 
-exports.createCategory = async (req, res) => {
+exports.createDepartment = async (req, res) => {
     const { title, description, isActive } = req.body;
     try {
         if (!title) {
             return res.status(400).json({ message: "Title field is required" });
         }
 
-        const createCategory = new Category({ title, description, isActive, createdBy: req.user.id });
-        await createCategory.save();
-        await createCategory.populate('createdBy', 'username');
-        res.status(201).json({ message: 'success', data: createCategory });
+        const createDepartment = new Department({ title, description, isActive, createdBy: req.user.id });
+        await createDepartment.save();
+        await createDepartment.populate('createdBy', 'username');
+        res.status(201).json({ message: 'success', data: createDepartment });
     } catch (error) {
         console.error('Error:', error.message);
         res.status(500).json({ message: 'Server error' });
     }
 }
-exports.updateCategory = async (req, res) => {
+exports.updateDepartment = async (req, res) => {
     const { id } = req.params;
     const { title, description, isActive } = req.body;
     try {
-        let getCategory = await Category.findById(id);
-        if (!getCategory) return res.status(404).json({ message: "Category not found" });
+        let getDepartment = await Department.findById(id);
+        if (!getDepartment) return res.status(404).json({ message: "Department not found" });
 
         if (!title) return res.status(400).json({ message: "Title field is required" });
 
-        let updateCategory = await Category.findByIdAndUpdate(
+        let updateDepartment = await Department.findByIdAndUpdate(
             id,
             { title, description, isActive, updatedBy: req.user.id },
             { new: true }
         ).populate('createdAt', 'username').populate('updatedBy', 'username');
 
-        res.status(200).json({ message: "success", data: updateCategory });
+        res.status(200).json({ message: "success", data: updateDepartment });
     } catch (error) {
         console.error('Error:', error.message);
         res.status(500).json({ message: 'Server error' });
     }
 }
 
-exports.deleteCategory = async (req, res) => {
+exports.deleteDepartment = async (req, res) => {
     const { id } = req.params;
     try {
-        const deleteCategory = await Category.findByIdAndDelete(id);
-        if (!deleteCategory) return res.status(404).json({ message: "Category not found" });
+        const deleteDepartment = await Department.findByIdAndDelete(id);
+        if (!deleteDepartment) return res.status(404).json({ message: "Department not found" });
         res.json({ message: "Deleted successfully!" });
     } catch (error) {
         console.error('Error:', error.message);

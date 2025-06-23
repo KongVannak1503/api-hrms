@@ -99,22 +99,31 @@ const File = require('../models/upload');
 
 exports.uploadSingleFile = async (req, res) => {
     try {
-        const { filename, size, mimetype } = req.file;
+        if (!req.file) {
+            return res.status(400).json({ message: 'No file uploaded' });
+        }
+
+        const { filename, size, mimetype, path: filePath, originalname } = req.file;
+        const folder = 'users';
 
         const file = new File({
+            name: originalname,
             filename,
             size: (size / (1024 * 1024)).toFixed(2) + 'MB',
             type: mimetype,
-            path: `\\uploads\\${filename}`,
-            createdBy: req.user._id  // assuming JWT middleware adds user info
+            path: `uploads/${folder}/${filename}`, // ← more accurate
+            createdBy: req.user?._id // avoid crash if user is undefined
         });
 
         await file.save();
+
         res.status(201).json({ message: 'File uploaded', file });
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        console.error('Upload Error:', err); // <== ADD THIS
+        res.status(500).json({ message: 'Internal Server Error', error: err.message });
     }
 };
+
 
 exports.uploadMultipleFiles = async (req, res) => {
     try {

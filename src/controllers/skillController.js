@@ -1,71 +1,75 @@
-const Category = require("../models/Category");
+const Skill = require("../models/Skill");
 
 // Get all 
-exports.getCategories = async (req, res) => {
+exports.getSkills = async (req, res) => {
     try {
-        const getCategories = await Category.find().populate('createdBy', 'username');
-        res.json(getCategories);
+        const getSkills = await Skill.find().populate('createdBy', 'username');
+        res.json(getSkills);
     } catch (error) {
         console.error('Error:', error.message);
         res.status(500).json({ message: err.message });
     }
 };
 
-exports.getCategory = async (req, res) => {
+exports.getSkill = async (req, res) => {
     const { id } = req.params;
     try {
-        const getCategory = await Category.findById(id);
-        if (!getCategory) return res.status(404).json({ message: "Category not found" });
-        res.json(getCategory);
+        const getSkill = await Skill.findById(id);
+        if (!getSkill) return res.status(404).json({ message: "Skill not found" });
+        res.json(getSkill);
     } catch (error) {
         console.error('Error:', error.message);
         res.status(500).json({ message: err.message });
     }
 }
 
-exports.createCategory = async (req, res) => {
+exports.createSkill = async (req, res) => {
     const { title, description, isActive } = req.body;
     try {
+        console.log(req.body);
+
         if (!title) {
             return res.status(400).json({ message: "Title field is required" });
         }
 
-        const createCategory = new Category({ title, description, isActive, createdBy: req.user.id });
-        await createCategory.save();
-        await createCategory.populate('createdBy', 'username');
-        res.status(201).json({ message: 'success', data: createCategory });
+        const createSkill = new Skill({ title, description, isActive, createdBy: req.user.id });
+        await createSkill.save();
+        await createSkill.populate('createdBy', 'username');
+        res.status(201).json({ message: 'success', data: createSkill });
     } catch (error) {
         console.error('Error:', error.message);
         res.status(500).json({ message: 'Server error' });
     }
 }
-exports.updateCategory = async (req, res) => {
+exports.updateSkill = async (req, res) => {
     const { id } = req.params;
     const { title, description, isActive } = req.body;
+    console.log(isActive);
+
     try {
-        let getCategory = await Category.findById(id);
-        if (!getCategory) return res.status(404).json({ message: "Category not found" });
+        let getSkill = await Skill.findById(id);
+        if (!getSkill) return res.status(404).json({ message: "Skill not found" });
 
         if (!title) return res.status(400).json({ message: "Title field is required" });
 
-        let updateCategory = await Category.findByIdAndUpdate(
+        let updateSkill = await Skill.findByIdAndUpdate(
             id,
             { title, description, isActive, updatedBy: req.user.id },
             { new: true }
         ).populate('createdAt', 'username').populate('updatedBy', 'username');
 
-        res.status(200).json({ message: "success", data: updateCategory });
+        res.status(200).json({ message: "success", data: updateSkill });
     } catch (error) {
         console.error('Error:', error.message);
         res.status(500).json({ message: 'Server error' });
     }
 }
 
-exports.deleteCategory = async (req, res) => {
+exports.deleteSkill = async (req, res) => {
     const { id } = req.params;
     try {
-        const deleteCategory = await Category.findByIdAndDelete(id);
-        if (!deleteCategory) return res.status(404).json({ message: "Category not found" });
+        const deleteSkill = await Skill.findByIdAndDelete(id);
+        if (!deleteSkill) return res.status(404).json({ message: "Skill not found" });
         res.json({ message: "Deleted successfully!" });
     } catch (error) {
         console.error('Error:', error.message);

@@ -4,7 +4,7 @@ const { check } = require('express-validator');
 const userController = require('../controllers/userController');
 const { protect } = require('../middleware/authMiddleware');
 const protectRoute = require('../middleware/protectRouteMiddleware');
-const upload = require('../middleware/upload');
+const { dynamicUploader } = require('../middleware/upload');
 
 
 // router.post('/logout', userController.logout);
@@ -18,7 +18,7 @@ router.post(
     '/upload',
     protect,
     protectRoute('update'),
-    upload.uploadSingle, // ← use the named export
+    (req, res, next) => dynamicUploader(fieldName = 'file', folder = 'users')(req, res, next), // use 'file'
     userController.uploadSingleFile
 );
 module.exports = router;

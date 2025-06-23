@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const fileSchema = new mongoose.Schema({
+    name: { type: String },
     filename: { type: String, required: true },
     size: { type: String }, // You can use Number if you prefer bytes
     type: { type: String },  // e.g., 'image/jpeg'

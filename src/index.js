@@ -7,6 +7,10 @@ const userRoutes = require('./routes/userRoutes');
 const roleRoutes = require('./routes/roleRoutes');
 const positionRoutes = require('./routes/positionRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
+const skillRoutes = require('./routes/skillRoutes');
+const departmentRoutes = require('./routes/departmentRoutes');
+const organizationRoutes = require('./routes/organizationRoutes');
+const employeeRoutes = require('./routes/employeeRoutes');
 const permissionRoutes = require('./routes/permissionRoutes');
 require('dotenv').config();
 
@@ -46,6 +50,10 @@ app.use('/api/users', userRoutes);
 app.use('/api/roles', roleRoutes);
 app.use('/api/positions', positionRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/skills', skillRoutes);
+app.use('/api/departments', departmentRoutes);
+app.use('/api/organizations', organizationRoutes);
+app.use('/api/employees', organizationRoutes);
 app.use('/api/permissions', permissionRoutes);
 
 app.listen(process.env.PORT, () =>
