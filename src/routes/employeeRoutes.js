@@ -5,11 +5,7 @@ const { protect } = require('../middleware/authMiddleware');
 const protectRoute = require('../middleware/protectRouteMiddleware');
 const { dynamicUploader } = require('../middleware/upload');
 
-// Place the specific route before the param route to avoid conflicts
-// router.get('/check/:name', employeeController.checkName);
-
 router.get('/', protect, protectRoute('view'), employeeController.getEmployees);
-// router.post('/', protect, protectRoute('create'), employeeController.createEmployee);
 router.post(
     '/',
     protect,
@@ -18,7 +14,7 @@ router.post(
     employeeController.createEmployee
 );
 router.get('/:id', protect, protectRoute('view'), employeeController.getEmployee);
-router.put('/:id', protect, protectRoute('update'), employeeController.updateCategory);
-router.delete('/:id', protect, protectRoute('delete'), employeeController.deleteCategory);
+// router.put('/:id', protect, protectRoute('update'), employeeController.updateCategory);
+router.delete('/:id', protect, protectRoute('delete'), employeeController.deleteEmployee);
 
 module.exports = router;

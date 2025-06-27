@@ -17,6 +17,7 @@ require('dotenv').config();
 dbConnect();
 
 const app = express();
+const path = require('path');
 
 // const allowedOrigins = [
 //     process.env.CLIENT_URL,
@@ -53,8 +54,9 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/skills', skillRoutes);
 app.use('/api/departments', departmentRoutes);
 app.use('/api/organizations', organizationRoutes);
-app.use('/api/employees', organizationRoutes);
+app.use('/api/employees', employeeRoutes);
 app.use('/api/permissions', permissionRoutes);
+app.use('/api/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.listen(process.env.PORT, () =>
     console.log(`Server running on port ${process.env.PORT}`)
