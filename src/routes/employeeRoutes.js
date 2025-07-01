@@ -13,6 +13,14 @@ router.post(
     (req, res, next) => dynamicUploader(fieldName = 'file', folder = 'employees')(req, res, next), // use 'file'
     employeeController.createEmployee
 );
+router.put(
+    '/:id',
+    protect,
+    protectRoute('update'),
+    dynamicUploader('file', 'employees'),
+    employeeController.updateEmployee
+);
+
 router.get('/:id', protect, protectRoute('view'), employeeController.getEmployee);
 // router.put('/:id', protect, protectRoute('update'), employeeController.updateCategory);
 router.delete('/:id', protect, protectRoute('delete'), employeeController.deleteEmployee);

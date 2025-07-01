@@ -12,6 +12,11 @@ const departmentRoutes = require('./routes/departmentRoutes');
 const organizationRoutes = require('./routes/organizationRoutes');
 const employeeRoutes = require('./routes/employeeRoutes');
 const permissionRoutes = require('./routes/permissionRoutes');
+const cityRoutes = require('./routes/cityRoutes');
+const districtRoutes = require('./routes/districtRoutes');
+const communeRoutes = require('./routes/communeRoutes');
+const villageRoutes = require('./routes/villageRoutes');
+const educationLevelRoutes = require('./routes/educationLevelRoutes');
 require('dotenv').config();
 
 dbConnect();
@@ -56,6 +61,11 @@ app.use('/api/departments', departmentRoutes);
 app.use('/api/organizations', organizationRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/permissions', permissionRoutes);
+app.use('/api/cities', cityRoutes);
+app.use('/api/districts', districtRoutes);
+app.use('/api/communes', communeRoutes);
+app.use('/api/villages', villageRoutes);
+app.use('/api/education-level', educationLevelRoutes);
 app.use('/api/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.listen(process.env.PORT, () =>

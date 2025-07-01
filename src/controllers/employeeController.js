@@ -8,7 +8,7 @@ exports.getEmployees = async (req, res) => {
     try {
         const getEmployees = await Employee.find()
             .populate('image_url')
-            .populate('createdBy', 'username');
+            .populate('createdBy', 'username').sort({ updatedAt: -1 });
         res.json(getEmployees);
     } catch (error) {
         console.error('Error:', error.message);
@@ -19,7 +19,8 @@ exports.getEmployees = async (req, res) => {
 exports.getEmployee = async (req, res) => {
     const { id } = req.params;
     try {
-        const getEmployee = await Employee.findById(id);
+        const getEmployee = await Employee.findById(id).populate('image_url')
+            .populate('createdBy', 'username');
         if (!getEmployee) return res.status(404).json({ message: "Category not found" });
         res.json(getEmployee);
     } catch (error) {
@@ -32,24 +33,38 @@ exports.getEmployee = async (req, res) => {
 exports.createEmployee = async (req, res) => {
     try {
         const {
-            first_name,
-            last_name,
+            employee_id,
+            first_name_en,
+            last_name_en,
+            first_name_kh,
+            last_name_kh,
             gender,
             height,
+            id_card_no,
+            passport_no,
             date_of_birth,
             place_of_birth,
             nationality,
+            maritalStatus,
+            city,
+            district,
+            commune,
+            village,
+            isActive,
             present_address,
             permanent_address,
             family_members,
             emergency_contact,
             staff_relationships,
-            isActive,
-            file,
+            language,
+            employment_history,
+            general_education,
+            short_course,
+            file
         } = req.body;
 
         // Validate required fields
-        if (!first_name || !last_name || !date_of_birth) {
+        if (!employee_id) {
             return res.status(400).json({ message: 'First name, last name, and date of birth are required.' });
         }
 
@@ -72,41 +87,58 @@ exports.createEmployee = async (req, res) => {
 
             await file.save();
             imageUrl = file._id;
-
         }
 
-        // Parse JSON fields (sent via FormData)
+        // Parse JSON fields from FormData
         const parsedPresentAddress = present_address ? JSON.parse(present_address) : null;
         const parsedPermanentAddress = permanent_address ? JSON.parse(permanent_address) : null;
         const parsedFamilyMembers = family_members ? JSON.parse(family_members) : [];
-        const parsedEmergencyContact = emergency_contact ? JSON.parse(emergency_contact) : [];
+        const parsedEmergencyContacts = emergency_contact ? JSON.parse(emergency_contact) : [];
         const parsedStaffRelationships = staff_relationships ? JSON.parse(staff_relationships) : [];
+        const parsedLanguages = language ? JSON.parse(language) : [];
+        const parsedEmploymentHistory = employment_history ? JSON.parse(employment_history) : [];
+        const parsedGeneralEducation = general_education ? JSON.parse(general_education) : [];
+        const parsedShortCourses = short_course ? JSON.parse(short_course) : [];
 
         // Create employee
         const createEmployee = new Employee({
-            first_name,
-            last_name,
+            employee_id,
+            first_name_en,
+            last_name_en,
+            first_name_kh,
+            last_name_kh,
             gender,
             height,
+            id_card_no,
+            passport_no,
             date_of_birth,
             place_of_birth,
             nationality,
+            maritalStatus,
+            city,
+            district,
+            commune,
+            village,
+            isActive: isActive ?? true,
+            image_url: imageUrl,
             present_address: parsedPresentAddress,
             permanent_address: parsedPermanentAddress,
             family_member: parsedFamilyMembers,
-            emergency_contact: parsedEmergencyContact,
+            emergency_contact: parsedEmergencyContacts,
             staff_relationships: parsedStaffRelationships,
-            image_url: imageUrl,
-            isActive: isActive ?? true,
+            language: parsedLanguages,
+            employment_history: parsedEmploymentHistory,
+            general_education: parsedGeneralEducation,
+            short_course: parsedShortCourses,
             createdBy: req.user?._id,
         });
 
         await createEmployee.save();
-        await createEmployee
+        const createEmployees = await Employee.findById(createEmployee._id)
             .populate('image_url')
             .populate('createdBy', 'username');
 
-        res.status(201).json({ message: 'Employee created successfully', data: createEmployee });
+        res.status(201).json({ message: 'Employee created successfully', data: createEmployees });
     } catch (error) {
         console.error('Error creating employee:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
@@ -115,42 +147,108 @@ exports.createEmployee = async (req, res) => {
 exports.updateEmployee = async (req, res) => {
     try {
         const { id } = req.params;
+        console.log("this is file", req.file);
 
+        // Find existing employee
+        const employee = await Employee.findById(id);
+        if (!employee) return res.status(404).json({ message: 'Employee not found' });
+
+        // Destructure fields from request body
         const {
-            first_name,
-            last_name,
+            employee_id,
+            first_name_en,
+            last_name_en,
+            first_name_kh,
+            last_name_kh,
             gender,
             height,
             date_of_birth,
             place_of_birth,
             nationality,
+            maritalStatus,
+            city,
+            district,
+            commune,
+            village,
+            isActive,
             present_address,
             permanent_address,
             family_members,
             emergency_contact,
             staff_relationships,
-            isActive,
+            language,
+            employment_history,
+            general_education,
+            short_course,
+            id_card_no,
+            passport_no,
+            file
+            // file is handled via req.file (multipart)
         } = req.body;
 
-        // Parse nested fields
+
+        if (!employee_id || !first_name_en || !first_name_kh || !last_name_en || !last_name_kh) {
+            return res.status(400).json({ message: 'First name, last name, and date of birth are required.' });
+        }
+        // Parse JSON fields
         const parsedPresentAddress = present_address ? JSON.parse(present_address) : null;
         const parsedPermanentAddress = permanent_address ? JSON.parse(permanent_address) : null;
         const parsedFamilyMembers = family_members ? JSON.parse(family_members) : [];
-        const parsedEmergencyContact = emergency_contact ? JSON.parse(emergency_contact) : [];
+        const parsedEmergencyContacts = emergency_contact ? JSON.parse(emergency_contact) : [];
         const parsedStaffRelationships = staff_relationships ? JSON.parse(staff_relationships) : [];
+        const parsedLanguages = language ? JSON.parse(language) : [];
+        const parsedEmploymentHistory = employment_history ? JSON.parse(employment_history) : [];
+        const parsedGeneralEducation = general_education ? JSON.parse(general_education) : [];
+        const parsedShortCourses = short_course ? JSON.parse(short_course) : [];
 
-        // Find employee
-        const employee = await Employee.findById(id);
-        if (!employee) {
-            return res.status(404).json({ message: 'Employee not found' });
-        }
+        // Update the fields
+        employee.employee_id = employee_id;
+        employee.first_name_en = first_name_en;
+        employee.last_name_en = last_name_en;
+        employee.first_name_kh = first_name_kh;
+        employee.last_name_kh = last_name_kh;
+        employee.gender = gender;
+        employee.height = height;
+        employee.id_card_no = id_card_no;
+        employee.passport_no = passport_no;
+        employee.date_of_birth = date_of_birth;
+        employee.place_of_birth = place_of_birth;
+        employee.nationality = nationality;
+        employee.maritalStatus = maritalStatus;
+        employee.city = city;
+        employee.district = district;
+        employee.commune = commune;
+        employee.village = village;
+        employee.isActive = isActive ?? true;
+        employee.present_address = parsedPresentAddress;
+        employee.permanent_address = parsedPermanentAddress;
+        employee.family_member = parsedFamilyMembers;
+        employee.emergency_contact = parsedEmergencyContacts;
+        employee.staff_relationships = parsedStaffRelationships;
+        employee.language = parsedLanguages;
+        employee.employment_history = parsedEmploymentHistory;
+        employee.general_education = parsedGeneralEducation;
+        employee.short_course = parsedShortCourses;
 
-        // Handle new file upload (if a new image is sent)
+        // Handle image upload
         if (req.file) {
+            // Delete old file if it exists
+            if (employee.image_url) {
+                const oldFile = await File.findById(employee.image_url);
+                if (oldFile) {
+                    const oldFilePath = path.join(__dirname, '..', oldFile.path);
+                    if (fs.existsSync(oldFilePath)) {
+                        fs.unlinkSync(oldFilePath);
+                    }
+                    await File.findByIdAndDelete(oldFile._id);
+                }
+            }
+
+            // Save new file
             const { filename, size, mimetype, originalname } = req.file;
             const folder = 'employees';
 
-            const file = new File({
+            const newFile = new File({
                 name: originalname,
                 filename,
                 size: (size / (1024 * 1024)).toFixed(2) + 'MB',
@@ -159,30 +257,19 @@ exports.updateEmployee = async (req, res) => {
                 createdBy: req.user?._id,
             });
 
-            await file.save();
-            employee.image_url = file.path;
+            await newFile.save();
+            employee.image_url = newFile._id;
         }
 
-        // Update fields
-        employee.first_name = first_name;
-        employee.last_name = last_name;
-        employee.gender = gender;
-        employee.height = height;
-        employee.date_of_birth = date_of_birth;
-        employee.place_of_birth = place_of_birth;
-        employee.nationality = nationality;
-        employee.present_address = parsedPresentAddress;
-        employee.permanent_address = parsedPermanentAddress;
-        employee.family_member = parsedFamilyMembers;
-        employee.emergency_contact = parsedEmergencyContact;
-        employee.staff_relationships = parsedStaffRelationships;
-        employee.isActive = isActive ?? employee.isActive;
-        employee.updatedBy = req.user?._id;
-
+        // Save updated employee
         await employee.save();
-        await employee.populate('updatedBy', 'username');
 
-        res.status(200).json({ message: 'Employee updated successfully', data: employee });
+        // Populate image_url and createdBy if needed
+        const updatedEmployee = await Employee.findById(employee._id)
+            .populate('image_url')
+            .populate('createdBy', 'username');
+
+        res.json({ message: 'Employee updated successfully', data: updatedEmployee });
     } catch (error) {
         console.error('Error updating employee:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
@@ -200,7 +287,6 @@ exports.deleteEmployee = async (req, res) => {
         // Assuming employee.image is a file reference ID or file data
         const fileId = employee.image_url; // if it's just an ID
         const fileRecord = await File.findById(fileId);
-        console.log(fileRecord);
 
         // Delete the physical file if exists
         if (fileRecord?.path) {
