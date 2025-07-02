@@ -67,5 +67,12 @@ router.post(
     employeeController.uploadDocuments
 );
 
+router.post(
+    '/upload123/:employeeId',
+    protect,
+    uploadDocuments.array('documents'),
+    employeeController.uploadDocuments
+);
+
 
 module.exports = router;
