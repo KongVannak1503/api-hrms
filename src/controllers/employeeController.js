@@ -1,7 +1,64 @@
 const path = require('path');
 const fs = require('fs');
 const Employee = require("../models/Employee");
+const Education = require("../models/Education");
+const EmployeeHistory = require("../models/EmployeeHistory");
 const File = require('../models/upload');
+const EmpDocument = require('../models/EmployeeDocument');
+
+
+exports.getEmployeeDocuments = async (req, res) => {
+    try {
+        const { employeeId } = req.params;
+
+        const documents = await EmpDocument.find({ employeeId })
+            .sort({ createdAt: -1 })
+            .select('name filename path type size createdAt');
+
+        res.json(documents);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
+
+exports.uploadDocuments = async (req, res) => {
+    try {
+        const { employeeId } = req.params;
+        const uploadedFiles = req.files;
+
+        if (!uploadedFiles || uploadedFiles.length === 0) {
+            return res.status(400).json({ message: 'No files uploaded' });
+        }
+
+        const savedFiles = [];
+
+        for (const file of uploadedFiles) {
+            const newFile = new EmpDocument({
+                name: file.originalname,
+                filename: file.filename,
+                type: file.mimetype,
+                size: (file.size / (1024 * 1024)).toFixed(2) + 'MB',
+                path: `uploads/documents/${file.filename}`,
+                employeeId,
+                createdBy: req.user?._id,
+            });
+
+            await newFile.save();
+            savedFiles.push(newFile);
+        }
+
+        res.status(200).json({
+            message: 'Files uploaded successfully',
+            files: savedFiles,
+        });
+    } catch (error) {
+        console.error('Upload error:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
+
 
 // Get all 
 exports.getEmployees = async (req, res) => {
@@ -55,12 +112,6 @@ exports.createEmployee = async (req, res) => {
             permanent_address,
             family_members,
             emergency_contact,
-            staff_relationships,
-            language,
-            employment_history,
-            general_education,
-            short_course,
-            file
         } = req.body;
 
         // Validate required fields
@@ -69,7 +120,6 @@ exports.createEmployee = async (req, res) => {
         }
 
         let imageUrl = null;
-        console.log(file);
 
         if (req.file) {
 
@@ -94,11 +144,6 @@ exports.createEmployee = async (req, res) => {
         const parsedPermanentAddress = permanent_address ? JSON.parse(permanent_address) : null;
         const parsedFamilyMembers = family_members ? JSON.parse(family_members) : [];
         const parsedEmergencyContacts = emergency_contact ? JSON.parse(emergency_contact) : [];
-        const parsedStaffRelationships = staff_relationships ? JSON.parse(staff_relationships) : [];
-        const parsedLanguages = language ? JSON.parse(language) : [];
-        const parsedEmploymentHistory = employment_history ? JSON.parse(employment_history) : [];
-        const parsedGeneralEducation = general_education ? JSON.parse(general_education) : [];
-        const parsedShortCourses = short_course ? JSON.parse(short_course) : [];
 
         // Create employee
         const createEmployee = new Employee({
@@ -125,11 +170,6 @@ exports.createEmployee = async (req, res) => {
             permanent_address: parsedPermanentAddress,
             family_member: parsedFamilyMembers,
             emergency_contact: parsedEmergencyContacts,
-            staff_relationships: parsedStaffRelationships,
-            language: parsedLanguages,
-            employment_history: parsedEmploymentHistory,
-            general_education: parsedGeneralEducation,
-            short_course: parsedShortCourses,
             createdBy: req.user?._id,
         });
 
@@ -144,10 +184,11 @@ exports.createEmployee = async (req, res) => {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
+
+
 exports.updateEmployee = async (req, res) => {
     try {
         const { id } = req.params;
-        console.log("this is file", req.file);
 
         // Find existing employee
         const employee = await Employee.findById(id);
@@ -309,5 +350,157 @@ exports.deleteEmployee = async (req, res) => {
     } catch (error) {
         console.error('Error deleting employee:', error.message);
         res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+
+// General Education
+
+// Get all 
+exports.getEducations = async (req, res) => {
+    try {
+        const getEducations = await Education.find()
+            .populate('createdBy', 'username').sort({ updatedAt: -1 });
+        res.json(getEducations);
+    } catch (error) {
+        console.error('Error:', error.message);
+        res.status(500).json({ message: err.message });
+    }
+};
+
+exports.getEducation = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const getEducation = await Education.findOne({ employeeId: id })
+            .populate('createdBy', 'username');
+        if (!getEducation) return res.status(404).json({ message: "Education not found" });
+        res.json(getEducation);
+    } catch (error) {
+        console.error('Error:', error.message);
+        res.status(500).json({ message: err.message });
+    }
+}
+
+
+exports.createOrUpdateEducation = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { general_education, short_course, language } = req.body;
+
+        if (!id) {
+            return res.status(400).json({ message: 'Employee ID is required.' });
+        }
+
+        // Parse JSON fields from FormData
+        const parsedLanguages = language ? JSON.parse(language) : [];
+        const parsedGeneralEducation = general_education ? JSON.parse(general_education) : [];
+        const parsedShortCourses = short_course ? JSON.parse(short_course) : [];
+
+        // Check if education already exists for this employee
+        let education = await Education.findOne({ employeeId: id });
+
+        if (education) {
+            // Update existing
+            education.language = parsedLanguages;
+            education.general_education = parsedGeneralEducation;
+            education.short_course = parsedShortCourses;
+            education.updatedBy = req.user?._id;
+            await education.save();
+        } else {
+            // Create new
+            education = new Education({
+                employeeId: id,
+                language: parsedLanguages,
+                general_education: parsedGeneralEducation,
+                short_course: parsedShortCourses,
+                createdBy: req.user?._id,
+            });
+            await education.save();
+        }
+
+        const populatedEducation = await Education.findById(education._id)
+            .populate('createdBy', 'username');
+
+        res.status(200).json({
+            message: education ? 'Education updated successfully' : 'Education created successfully',
+            data: populatedEducation,
+        });
+    } catch (error) {
+        console.error('Error creating/updating education:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
+
+// General History
+
+// Get all 
+exports.getEmployeeHistories = async (req, res) => {
+    try {
+        const getEmployeeHistories = await EmployeeHistory.find()
+            .populate('createdBy', 'username').sort({ updatedAt: -1 });
+        res.json(getEmployeeHistories);
+    } catch (error) {
+        console.error('Error:', error.message);
+        res.status(500).json({ message: err.message });
+    }
+};
+
+exports.getEmployeeHistory = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const getEmployeeHistory = await EmployeeHistory.findOne({ employeeId: id })
+            .populate('createdBy', 'username');
+        if (!getEmployeeHistory) return res.status(404).json({ message: "Education not found" });
+        res.json(getEmployeeHistory);
+    } catch (error) {
+        console.error('Error:', error.message);
+        res.status(500).json({ message: err.message });
+    }
+}
+
+
+exports.createOrUpdateEmployeeHistory = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { employment_history } = req.body;
+        if (!id) {
+            return res.status(400).json({ message: 'ID is required.' });
+        }
+
+        // Parse employment history from FormData (if sent as a JSON string)
+
+        const parsedEmploymentHistory = employment_history ? JSON.parse(employment_history) : [];
+
+        // Check if an EmployeeHistory document already exists
+        const existing = await EmployeeHistory.findOne({ employeeId: id });
+
+        let savedHistory;
+
+        if (existing) {
+            existing.employment_history = parsedEmploymentHistory;
+            existing.updatedBy = req.user?._id;
+            savedHistory = await existing.save();
+        } else {
+            // Create new
+            const newHistory = new EmployeeHistory({
+                employeeId: id,
+                employment_history: parsedEmploymentHistory,
+                createdBy: req.user?._id
+            });
+            savedHistory = await newHistory.save();
+        }
+
+        const populatedHistory = await EmployeeHistory.findById(savedHistory._id)
+            .populate('createdBy', 'username');
+
+        res.status(200).json({
+            message: existing ? 'Employment history updated successfully' : 'Employment history created successfully',
+            data: populatedHistory,
+        });
+
+    } catch (error) {
+        console.error('Error saving employment history:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
