@@ -6,6 +6,7 @@ const employeeDocumentSchema = new mongoose.Schema({
     type: String,
     size: String,
     path: String,
+    extension: String,
     employeeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
