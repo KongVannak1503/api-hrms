@@ -10,6 +10,7 @@ const protectRoute = require('../middleware/protectRouteMiddleware');
 router.get('/', protect, protectRoute('view'), positionController.getPositions);
 router.post('/', protect, protectRoute('create'), positionController.createPosition);
 router.get('/:id', protect, protectRoute('view'), positionController.getPosition);
+router.get('/by-department/:departmentId', protect, protectRoute('view'), positionController.getPositionsByDepartment);
 router.put('/:id', protect, protectRoute('update'), positionController.updatePosition);
 router.delete('/:id', protect, protectRoute('delete'), positionController.deletePosition);
 
