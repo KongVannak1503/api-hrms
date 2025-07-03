@@ -1,25 +1,49 @@
 const Department = require("../models/Department");
+const Position = require("../models/Position");
 
 // Get all 
 exports.getDepartments = async (req, res) => {
     try {
-        const getDepartments = await Department.find().populate('createdBy', 'username');
-        res.json(getDepartments);
+        const departments = await Department.find().populate('createdBy', 'username');
+
+        // Aggregate position counts per department
+        const positionCounts = await Position.aggregate([
+            {
+                $group: {
+                    _id: "$department",
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        // Merge position count into each department
+        const departmentWithCounts = departments.map(dept => {
+            const matched = positionCounts.find(p => p._id?.toString() === dept._id.toString());
+            return {
+                ...dept.toObject(),
+                positionCount: matched ? matched.count : 0
+            };
+        });
+
+        res.json(departmentWithCounts);
     } catch (error) {
         console.error('Error:', error.message);
-        res.status(500).json({ message: err.message });
+        res.status(500).json({ message: error.message });
     }
 };
 
 exports.getDepartment = async (req, res) => {
     const { id } = req.params;
     try {
-        const getDepartment = await Department.findById(id);
-        if (!getDepartment) return res.status(404).json({ message: "Department not found" });
-        res.json(getDepartment);
+        const department = await Department.findById(id);
+        if (!department) return res.status(404).json({ message: "Department not found" });
+
+        const positionCount = await Position.countDocuments({ department: department._id });
+
+        res.json({ ...department.toObject(), positionCount });
     } catch (error) {
         console.error('Error:', error.message);
-        res.status(500).json({ message: err.message });
+        res.status(500).json({ message: error.message });
     }
 }
 

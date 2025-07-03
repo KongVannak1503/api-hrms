@@ -50,6 +50,7 @@ app.use(cors({
 
 app.use(express.json());
 
+app.use('/api/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -66,7 +67,10 @@ app.use('/api/districts', districtRoutes);
 app.use('/api/communes', communeRoutes);
 app.use('/api/villages', villageRoutes);
 app.use('/api/education-level', educationLevelRoutes);
-app.use('/api/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/api/job-types', require("./routes/jobTypeRoutes"));
+app.use('/api/job-postings', require("./routes/jobPostingRoutes"));
+
+app.use('/api/applicants', require("./routes/applicantRoutes"));
 
 app.listen(process.env.PORT, () =>
     console.log(`Server running on port ${process.env.PORT}`)
