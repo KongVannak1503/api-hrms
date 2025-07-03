@@ -5,13 +5,14 @@ const Education = require("../models/Education");
 const EmployeeHistory = require("../models/EmployeeHistory");
 const File = require('../models/upload');
 const EmpDocument = require('../models/EmployeeDocument');
-
+const iconv = require('iconv-lite');
 
 exports.getEmployeeDocuments = async (req, res) => {
     try {
         const { employeeId } = req.params;
 
         const documents = await EmpDocument.find({ employeeId })
+            .populate('createdBy', 'username')
             .sort({ createdAt: -1 })
             .select('name filename path type size createdAt');
 
@@ -33,9 +34,12 @@ exports.uploadDocuments = async (req, res) => {
 
         const savedFiles = [];
 
+        console.log(req.files);
+
         for (const file of uploadedFiles) {
+            const fixedName = iconv.decode(Buffer.from(file.originalname, 'latin1'), 'utf8');
             const newFile = new EmpDocument({
-                name: file.originalname,
+                name: fixedName,
                 filename: file.filename,
                 type: file.mimetype,
                 size: (file.size / (1024 * 1024)).toFixed(2) + 'MB',
@@ -58,6 +62,32 @@ exports.uploadDocuments = async (req, res) => {
     }
 };
 
+exports.deleteDocument = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const document = await EmpDocument.findById(id);
+        if (!document) {
+            return res.status(404).json({ message: "Document not found" });
+        }
+
+        // Delete the file from the filesystem
+        const filePath = path.join(__dirname, '..', document.path);
+        fs.unlink(filePath, (err) => {
+            if (err) {
+                console.warn('File not found or already deleted:', document.path);
+            }
+        });
+
+        // Delete from DB
+        await EmpDocument.findByIdAndDelete(id);
+
+        res.json({ message: "Document deleted successfully" });
+    } catch (error) {
+        console.error('Error deleting:', error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
 
 
 // Get all 

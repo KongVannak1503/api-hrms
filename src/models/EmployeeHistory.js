@@ -5,6 +5,7 @@ const employmentHistorySchema = new mongoose.Schema({
     company: { type: String },
     supervisor_name: { type: String },
     phone: { type: String },
+    address: { type: String },
     start_date: { type: Date },
     end_date: { type: Date }
 }, { _id: false });

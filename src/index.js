@@ -70,6 +70,12 @@ app.use('/api/education-level', educationLevelRoutes);
 app.use('/api/employee-document', employeeDocumentRoutes);
 app.use('/api/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.get('/download/:folder/:filename', (req, res) => {
+    const { folder, filename } = req.params;
+    const filePath = path.join(__dirname, 'uploads', folder, filename);
+    res.download(filePath); // force browser to download
+});
+
 
 
 app.listen(process.env.PORT, () =>

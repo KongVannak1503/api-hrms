@@ -10,7 +10,16 @@ const { getMulterUploader } = require('../middleware/uploadMulti');
 // const uploadMul = require('../middleware/uploadMulti');
 // const uploadMul = require('../middleware/uploadMulti');
 const uploadMul = multer();
-const uploadDocuments = getMulterUploader('documents');
+const multerUploader = getMulterUploader('documents');
+
+
+
+router.post(
+    '/upload/:employeeId',
+    protect,
+    multerUploader.array('documents'),
+    employeeController.uploadDocuments
+);
 
 router.get('/', protect, protectRoute('view'), employeeController.getEmployees);
 router.post(
@@ -59,20 +68,23 @@ router.post(
     uploadMul.array('documents'),
     employeeController.uploadDocuments
 );
-// router.get('/upload/:employeeId', protect, employeeController.getEmployeeDocuments);
-router.post(
-    '/upload/:employeeId',
-    protect,
-    uploadDocuments.array('documents'),
-    employeeController.uploadDocuments
-);
+router.get('/upload/:employeeId', protect, employeeController.getEmployeeDocuments);
+// router.post(
+//     '/upload/:employeeId',
+//     protect,
+//     uploadDocuments.array('documents'),
+//     employeeController.uploadDocuments
+// );
+router.get('/upload/:employeeId', protect, protectRoute('view'), employeeController.getEmployees);
+// router.post(
+//     '/upload123/:employeeId',
+//     protect,
+//     uploadDocuments.array('documents'),
+//     employeeController.uploadDocuments
+// );
 
-router.post(
-    '/upload123/:employeeId',
-    protect,
-    uploadDocuments.array('documents'),
-    employeeController.uploadDocuments
-);
+router.delete('/upload/:id', protect, protectRoute('delete'), employeeController.deleteDocument);
+
 
 
 module.exports = router;
