@@ -17,6 +17,7 @@ const districtRoutes = require('./routes/districtRoutes');
 const communeRoutes = require('./routes/communeRoutes');
 const villageRoutes = require('./routes/villageRoutes');
 const educationLevelRoutes = require('./routes/educationLevelRoutes');
+const employeeDocumentRoutes = require('./routes/employeeDocumentRoutes');
 require('dotenv').config();
 
 dbConnect();
@@ -71,6 +72,15 @@ app.use('/api/job-types', require("./routes/jobTypeRoutes"));
 app.use('/api/job-postings', require("./routes/jobPostingRoutes"));
 
 app.use('/api/applicants', require("./routes/applicantRoutes"));
+app.use('/api/employee-document', employeeDocumentRoutes);
+app.use('/api/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.get('/download/:folder/:filename', (req, res) => {
+    const { folder, filename } = req.params;
+    const filePath = path.join(__dirname, 'uploads', folder, filename);
+    res.download(filePath); // force browser to download
+});
+
 
 app.listen(process.env.PORT, () =>
     console.log(`Server running on port ${process.env.PORT}`)
