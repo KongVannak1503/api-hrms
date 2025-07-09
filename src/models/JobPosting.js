@@ -24,7 +24,11 @@ const jobPostingSchema = new mongoose.Schema({
   requirements: {type: String},
   open_date: { type: Date, required: true },
   close_date: { type: Date, required: true },
-  status: { type: Boolean, default: true }, // true = open
+  status: {
+    type: String,
+    enum: ['Draft', 'Open', 'Close'],
+    default: 'Draft',
+  },
 
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

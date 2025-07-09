@@ -1,4 +1,5 @@
 const JobPosting = require('../models/JobPosting');
+const Applicant = require('../models/Applicant');
 
 // Create new job posting
 exports.createJobPosting = async (req, res) => {
@@ -36,7 +37,7 @@ exports.createJobPosting = async (req, res) => {
   }
 };
 
-// Get all job postings
+// Get all job postings with applicants (as candidates)
 exports.getAllJobPostings = async (req, res) => {
   try {
     const jobs = await JobPosting.find()
@@ -45,7 +46,20 @@ exports.getAllJobPostings = async (req, res) => {
       .populate('job_type', 'title')
       .sort({ createdAt: -1 });
 
-    res.status(200).json(jobs);
+    // Manually attach candidates to each job
+    const jobsWithCandidates = await Promise.all(jobs.map(async (job) => {
+      const candidates = await Applicant.find({ job_posting_id: job._id }).select('full_name_en photo');
+      return {
+        ...job.toObject(),
+        candidates: candidates.map(app => ({
+          name: app.full_name_en,
+          avatar: app.photo
+        })),
+        candidates_count: candidates.length
+      };
+    }));
+
+    res.status(200).json(jobsWithCandidates);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
