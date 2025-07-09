@@ -12,7 +12,7 @@ const GeneralEducationSchema = new mongoose.Schema({
 }, { _id: false });
 
 const LanguageSchema = new mongoose.Schema({
-    name: { type: String },
+    name: { type: mongoose.Schema.Types.ObjectId, ref: 'LanguagesSelect' },
 
     // Reading Skills
     read_poor: { type: Boolean, default: false },
@@ -44,11 +44,21 @@ const ShortCourseSchema = new mongoose.Schema({
     certificate: { type: String },
 }, { _id: false });
 
+const VocationalTrainingSchema = new mongoose.Schema({
+    institution: { type: String },
+    subject: { type: String },
+    start_date: { type: Date },
+    end_date: { type: Date },
+    level_id: { type: mongoose.Schema.Types.ObjectId, ref: 'EducationLevel' },
+    certificate: { type: String },
+}, { _id: false });
+
 
 const EducationSchema = new mongoose.Schema({
     employeeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' },
     general_education: [GeneralEducationSchema],
     language: [LanguageSchema],
+    vocational_training: [VocationalTrainingSchema],
     short_course: [ShortCourseSchema],
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

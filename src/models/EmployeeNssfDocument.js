@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const employeeDocumentSchema = new mongoose.Schema({
+const employeeNssfDocumentSchema = new mongoose.Schema({
     title: String,
     name: String,
     filename: String,
@@ -12,4 +12,4 @@ const employeeDocumentSchema = new mongoose.Schema({
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 
-module.exports = mongoose.model('EmployeeDocument', employeeDocumentSchema);
+module.exports = mongoose.model('EmployeeNssfDocument', employeeNssfDocumentSchema);

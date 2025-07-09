@@ -4,8 +4,16 @@ const Employee = require("../models/Employee");
 const Education = require("../models/Education");
 const EmployeeHistory = require("../models/EmployeeHistory");
 const File = require('../models/upload');
+const EmployeeLaborLaw = require('../models/LaborLaw');
 const EmpDocument = require('../models/EmployeeDocument');
+const EmpBook = require('../models/EmployeeBook');
+const EmpBodyBook = require('../models/EmployeeBodyBook');
+const EmpNssfDoc = require('../models/EmployeeNssfDocument');
+const EmpNssf = require('../models/EmployeeNssf');
+const EmpHealthBook = require('../models/EmployeeHealthBook');
+const languages = require('../models/Languages');
 const iconv = require('iconv-lite');
+const Languages = require('../models/Languages');
 
 exports.getEmployeeDocuments = async (req, res) => {
     try {
@@ -14,7 +22,7 @@ exports.getEmployeeDocuments = async (req, res) => {
         const documents = await EmpDocument.find({ employeeId })
             .populate('createdBy', 'username')
             .sort({ createdAt: -1 })
-            .select('name filename path type size createdAt');
+            .select('title name filename path type size createdAt');
 
         res.json(documents);
     } catch (error) {
@@ -27,6 +35,7 @@ exports.uploadDocuments = async (req, res) => {
     try {
         const { employeeId } = req.params;
         const uploadedFiles = req.files;
+        const { title } = req.body;
 
         if (!uploadedFiles || uploadedFiles.length === 0) {
             return res.status(400).json({ message: 'No files uploaded' });
@@ -39,6 +48,7 @@ exports.uploadDocuments = async (req, res) => {
         for (const file of uploadedFiles) {
             const fixedName = iconv.decode(Buffer.from(file.originalname, 'latin1'), 'utf8');
             const newFile = new EmpDocument({
+                title: title,
                 name: fixedName,
                 filename: file.filename,
                 type: file.mimetype,
@@ -89,6 +99,470 @@ exports.deleteDocument = async (req, res) => {
     }
 };
 
+// NSSF
+exports.getEmployeeNssfDoc = async (req, res) => {
+    try {
+        const { employeeId } = req.params;
+
+        const documents = await EmpNssfDoc.find({ employeeId })
+            .populate('createdBy', 'username')
+            .sort({ createdAt: -1 })
+            .select('title name filename path type size createdAt');
+
+        res.json(documents);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
+exports.getEmployeeNssf = async (req, res) => {
+    try {
+        const { employeeId } = req.params;
+
+        const documents = await EmpNssf.find({ employeeId })
+            .populate('createdBy', 'username')
+            .sort({ createdAt: -1 });
+
+        res.json(documents);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
+exports.uploadNssf = async (req, res) => {
+    try {
+        const { employeeId } = req.params;
+        const uploadedFiles = req.files;
+        const { title, claimTitle, claimDate, claimType, claimOther } = req.body;
+        console.log(req.bod);
+
+        // ✅ Always save NSSF record first
+        const nssfRecord = new EmpNssf({
+            employeeId,
+            claimTitle,
+            claimDate,
+            claimType,
+            claimOther,
+            createdBy: req.user?._id,
+        });
+
+        await nssfRecord.save();
+
+        const savedFiles = [];
+
+        // ✅ If files are present, save them
+        if (uploadedFiles && uploadedFiles.length > 0) {
+            for (const file of uploadedFiles) {
+                const fixedName = iconv.decode(Buffer.from(file.originalname, 'latin1'), 'utf8');
+                const newFile = new EmpNssfDoc({
+                    title: title,
+                    name: fixedName,
+                    filename: file.filename,
+                    type: file.mimetype,
+                    size: (file.size / (1024 * 1024)).toFixed(2) + 'MB',
+                    path: `uploads/documents/${file.filename}`,
+                    employeeId,
+                    nssfId: nssfRecord._id, // ✅ link to the NSSF record
+                    createdBy: req.user?._id,
+                });
+
+                await newFile.save();
+                savedFiles.push(newFile);
+            }
+        }
+
+        res.status(200).json({
+            message: 'Claim created successfully',
+            nssf: nssfRecord,
+            files: savedFiles,
+        });
+    } catch (error) {
+        console.error('Upload error:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
+
+exports.deleteNssfDoc = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const document = await EmpNssfDoc.findById(id);
+        if (!document) {
+            return res.status(404).json({ message: "Document not found" });
+        }
+
+        // Delete the file from the filesystem
+        const filePath = path.join(__dirname, '..', document.path);
+        fs.unlink(filePath, (err) => {
+            if (err) {
+                console.warn('File not found or already deleted:', document.path);
+            }
+        });
+
+        // Delete from DB
+        await EmpNssfDoc.findByIdAndDelete(id);
+
+        res.json({ message: "Document deleted successfully" });
+    } catch (error) {
+        console.error('Error deleting:', error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+exports.deleteNssf = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const document = await EmpNssf.findById(id);
+        if (!document) {
+            return res.status(404).json({ message: "Document not found" });
+        }
+        // Delete from DB
+        await EmpNssf.findByIdAndDelete(id);
+
+        res.json({ message: "Document deleted successfully" });
+    } catch (error) {
+        console.error('Error deleting:', error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+// Labor Law
+
+exports.getEmployeeLaborLaw = async (req, res) => {
+    try {
+        const { employeeId } = req.params;
+
+        const documents = await EmployeeLaborLaw.find({ employeeId })
+            .populate('createdBy', 'username')
+            .sort({ createdAt: -1 });
+        res.json(documents);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
+exports.uploadLaborLaw = async (req, res) => {
+    try {
+        const uploadedFiles = req.files;
+        const {
+            employeeId,
+            title,
+            position,
+            employeeType,
+            duration,
+        } = req.body;
+
+        if (!uploadedFiles || uploadedFiles.length === 0) {
+            return res.status(400).json({ message: 'No files uploaded' });
+        }
+
+        // Prepare uploaded files
+        const fileData = uploadedFiles.map(file => {
+            const decodedName = iconv.decode(Buffer.from(file.originalname, 'latin1'), 'utf8');
+            return {
+                name: decodedName,
+                filename: file.filename,
+                type: file.mimetype,
+                size: (file.size / (1024 * 1024)).toFixed(2) + 'MB',
+                path: `uploads/documents/${file.filename}`,
+                extension: file.originalname.split('.').pop(),
+            };
+        });
+
+        // Find existing record
+        let laborLaw = await EmployeeLaborLaw.findOne({ employeeId });
+
+        if (laborLaw) {
+            // Update metadata fields
+            laborLaw.title = title;
+            laborLaw.position = position;
+            laborLaw.employee_type = employeeType;
+            laborLaw.duration = duration;
+
+            // Append new files to existing array
+            laborLaw.file = [...(laborLaw.file || []), ...fileData];
+
+            laborLaw.updatedBy = req.user?._id;
+            await laborLaw.save();
+
+            return res.status(200).json({ message: 'Updated successfully', data: laborLaw });
+        }
+
+        // Create new record if none found
+        laborLaw = new EmployeeLaborLaw({
+            employeeId,
+            title,
+            position,
+            employee_type: employeeType,
+            duration,
+            createdBy: req.user?._id,
+            file: fileData,
+        });
+
+        await laborLaw.save();
+        res.status(200).json({ message: 'Created successfully', data: laborLaw });
+
+    } catch (error) {
+        console.error('Upload error:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
+
+
+exports.deleteLaborLaw = async (req, res) => {
+    const { id } = req.params;  // file id inside the array
+
+    try {
+        const laborLawDoc = await EmployeeLaborLaw.findOne({ "file._id": id });
+        if (!laborLawDoc) {
+            return res.status(404).json({ message: "File not found" });
+        }
+
+        // Find the file object for path to delete physical file
+        const fileObj = laborLawDoc.file.find(f => f._id.toString() === id);
+        if (!fileObj) {
+            return res.status(404).json({ message: "File not found in document" });
+        }
+
+        // Delete physical file
+        const filePath = path.join(__dirname, '..', fileObj.path);
+        fs.unlink(filePath, (err) => {
+            if (err) {
+                console.warn('File not found or already deleted:', fileObj.path);
+            }
+        });
+
+        // Remove file from array using pull()
+        laborLawDoc.file.pull({ _id: id });
+
+        // Save updated document
+        await laborLawDoc.save();
+
+        res.json({ message: "File deleted successfully" });
+    } catch (error) {
+        console.error('Error deleting file:', error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+
+// book
+exports.getEmployeeBooks = async (req, res) => {
+    try {
+        const { employeeId } = req.params;
+
+        const books = await EmpBook.find({ employeeId })
+            .populate('employeeId', 'name_kh')
+            .populate('createdBy', 'username')
+            .sort({ createdAt: -1 });
+        res.json(books);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+exports.getEmployeeHealthBooks = async (req, res) => {
+    try {
+        const { employeeId } = req.params;
+
+        const books = await EmpHealthBook.find({ employeeId })
+            .populate('employeeId', 'name_kh')
+            .populate('createdBy', 'username')
+            .sort({ createdAt: -1 });
+        res.json(books);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
+exports.getEmployeeBodyBooks = async (req, res) => {
+    try {
+        const { employeeId } = req.params;
+
+        const books = await EmpBodyBook.find({ employeeId })
+            .populate('employeeId', 'name_kh')
+            .populate('createdBy', 'username')
+            .sort({ createdAt: -1 });
+        res.json(books);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
+exports.uploadBooks = async (req, res) => {
+    try {
+        const { employeeId } = req.params;
+        const { healthTitle, healthDate, bodyTitle, bodyDate, bookTitle, bookDate, bookEndDate, post } = req.body;
+        const uploadedFiles = req.files;
+        const isPosted = post === 'true';
+        const savedFiles = [];
+
+        await Employee.findByIdAndUpdate(employeeId, { post: isPosted });
+
+        // Helper to process each section
+        const processFiles = async (files, Model, title, date) => {
+            if (!files) return;
+
+            for (const file of files) {
+                const fixedName = iconv.decode(Buffer.from(file.originalname, 'latin1'), 'utf8');
+
+                const newFile = new Model({
+                    title,
+                    name: fixedName,
+                    filename: file.filename,
+                    type: file.mimetype,
+                    size: (file.size / (1024 * 1024)).toFixed(2) + 'MB',
+                    path: `uploads/documents/${file.filename}`,
+                    extension: file.originalname.split('.').pop(),
+                    start_date: date ? new Date(date) : null,
+                    end_date: bookEndDate ? new Date(bookEndDate) : undefined,
+                    employeeId,
+                    createdBy: req.user?._id,
+                });
+
+                await newFile.save();
+                savedFiles.push(newFile);
+            }
+        };
+
+        await processFiles(uploadedFiles.healthFiles, EmpHealthBook, healthTitle, healthDate);
+        await processFiles(uploadedFiles.bodyFiles, EmpBodyBook, bodyTitle, bodyDate);
+        await processFiles(uploadedFiles.bookFiles, EmpBook, bookTitle, bookDate, bookEndDate);
+
+        // ✅ Return success even if no files, but post is updated
+        return res.status(200).json({
+            message: savedFiles.length > 0
+                ? 'Files uploaded and employee updated successfully'
+                : 'Employee updated successfully (no files uploaded)',
+            files: savedFiles,
+        });
+    } catch (error) {
+        console.error('Upload error:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
+
+// exports.uploadBooks = async (req, res) => {
+//     try {
+//         const { employeeId } = req.params;
+//         const uploadedFiles = req.files;
+//         const { title } = req.body;
+
+//         if (!uploadedFiles || uploadedFiles.length === 0) {
+//             return res.status(400).json({ message: 'No files uploaded' });
+//         }
+//         const savedFiles = [];
+
+//         console.log(req.files);
+
+//         for (const file of uploadedFiles) {
+//             const fixedName = iconv.decode(Buffer.from(file.originalname, 'latin1'), 'utf8');
+//             const newFile = new EmpBook({
+//                 title: title,
+//                 name: fixedName,
+//                 filename: file.filename,
+//                 type: file.mimetype,
+//                 size: (file.size / (1024 * 1024)).toFixed(2) + 'MB',
+//                 path: `uploads/documents/${file.filename}`,
+//                 employeeId,
+//                 createdBy: req.user?._id,
+//             });
+
+//             await newFile.save();
+//             savedFiles.push(newFile);
+//         }
+
+//         res.status(200).json({
+//             message: 'Files uploaded successfully',
+//             files: savedFiles,
+//         });
+//     } catch (error) {
+//         console.error('Upload error:', error);
+//         res.status(500).json({ message: 'Server error', error: error.message });
+//     }
+// };
+
+exports.deleteBook = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const document = await EmpBook.findById(id);
+        if (!document) {
+            return res.status(404).json({ message: "Document not found" });
+        }
+
+        // Delete the file from the filesystem
+        const filePath = path.join(__dirname, '..', document.path);
+        fs.unlink(filePath, (err) => {
+            if (err) {
+                console.warn('File not found or already deleted:', document.path);
+            }
+        });
+
+        // Delete from DB
+        await EmpBook.findByIdAndDelete(id);
+
+        res.json({ message: "Document deleted successfully" });
+    } catch (error) {
+        console.error('Error deleting:', error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+exports.deleteHealthBook = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const document = await EmpHealthBook.findById(id);
+        if (!document) {
+            return res.status(404).json({ message: "Document not found" });
+        }
+
+        // Delete the file from the filesystem
+        const filePath = path.join(__dirname, '..', document.path);
+        fs.unlink(filePath, (err) => {
+            if (err) {
+                console.warn('File not found or already deleted:', document.path);
+            }
+        });
+
+        // Delete from DB
+        await EmpHealthBook.findByIdAndDelete(id);
+
+        res.json({ message: "Document deleted successfully" });
+    } catch (error) {
+        console.error('Error deleting:', error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+exports.deleteBodyBook = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const document = await EmpBodyBook.findById(id);
+        if (!document) {
+            return res.status(404).json({ message: "Document not found" });
+        }
+
+        // Delete the file from the filesystem
+        const filePath = path.join(__dirname, '..', document.path);
+        fs.unlink(filePath, (err) => {
+            if (err) {
+                console.warn('File not found or already deleted:', document.path);
+            }
+        });
+
+        // Delete from DB
+        await EmpBodyBook.findByIdAndDelete(id);
+
+        res.json({ message: "Document deleted successfully" });
+    } catch (error) {
+        console.error('Error deleting:', error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
 
 // Get all 
 exports.getEmployees = async (req, res) => {
@@ -126,7 +600,8 @@ exports.createEmployee = async (req, res) => {
             first_name_kh,
             last_name_kh,
             gender,
-            height,
+            phone,
+            email,
             id_card_no,
             passport_no,
             date_of_birth,
@@ -137,9 +612,11 @@ exports.createEmployee = async (req, res) => {
             district,
             commune,
             village,
+            present_city,
+            present_district,
+            present_commune,
+            present_village,
             isActive,
-            present_address,
-            permanent_address,
             family_members,
             emergency_contact,
         } = req.body;
@@ -170,11 +647,10 @@ exports.createEmployee = async (req, res) => {
         }
 
         // Parse JSON fields from FormData
-        const parsedPresentAddress = present_address ? JSON.parse(present_address) : null;
-        const parsedPermanentAddress = permanent_address ? JSON.parse(permanent_address) : null;
         const parsedFamilyMembers = family_members ? JSON.parse(family_members) : [];
         const parsedEmergencyContacts = emergency_contact ? JSON.parse(emergency_contact) : [];
-
+        const nameKh = first_name_kh + " " + last_name_kh;
+        const nameEn = last_name_en + " " + first_name_en;
         // Create employee
         const createEmployee = new Employee({
             employee_id,
@@ -182,8 +658,11 @@ exports.createEmployee = async (req, res) => {
             last_name_en,
             first_name_kh,
             last_name_kh,
+            name_en: nameEn,
+            name_kh: nameKh,
             gender,
-            height,
+            phone,
+            email,
             id_card_no,
             passport_no,
             date_of_birth,
@@ -194,10 +673,12 @@ exports.createEmployee = async (req, res) => {
             district,
             commune,
             village,
+            present_city,
+            present_district,
+            present_commune,
+            present_village,
             isActive: isActive ?? true,
             image_url: imageUrl,
-            present_address: parsedPresentAddress,
-            permanent_address: parsedPermanentAddress,
             family_member: parsedFamilyMembers,
             emergency_contact: parsedEmergencyContacts,
             createdBy: req.user?._id,
@@ -232,7 +713,8 @@ exports.updateEmployee = async (req, res) => {
             first_name_kh,
             last_name_kh,
             gender,
-            height,
+            phone,
+            email,
             date_of_birth,
             place_of_birth,
             nationality,
@@ -241,9 +723,13 @@ exports.updateEmployee = async (req, res) => {
             district,
             commune,
             village,
+            present_city,
+            present_district,
+            present_commune,
+            present_village,
             isActive,
-            present_address,
-            permanent_address,
+            // present_address,
+            // permanent_address,
             family_members,
             emergency_contact,
             staff_relationships,
@@ -262,8 +748,6 @@ exports.updateEmployee = async (req, res) => {
             return res.status(400).json({ message: 'First name, last name, and date of birth are required.' });
         }
         // Parse JSON fields
-        const parsedPresentAddress = present_address ? JSON.parse(present_address) : null;
-        const parsedPermanentAddress = permanent_address ? JSON.parse(permanent_address) : null;
         const parsedFamilyMembers = family_members ? JSON.parse(family_members) : [];
         const parsedEmergencyContacts = emergency_contact ? JSON.parse(emergency_contact) : [];
         const parsedStaffRelationships = staff_relationships ? JSON.parse(staff_relationships) : [];
@@ -272,14 +756,20 @@ exports.updateEmployee = async (req, res) => {
         const parsedGeneralEducation = general_education ? JSON.parse(general_education) : [];
         const parsedShortCourses = short_course ? JSON.parse(short_course) : [];
 
+        const nameKh = first_name_kh + " " + last_name_kh;
+        const nameEn = last_name_en + " " + first_name_en;
+
         // Update the fields
         employee.employee_id = employee_id;
+        employee.name_en = nameEn;
+        employee.name_kh = nameKh;
         employee.first_name_en = first_name_en;
         employee.last_name_en = last_name_en;
         employee.first_name_kh = first_name_kh;
         employee.last_name_kh = last_name_kh;
         employee.gender = gender;
-        employee.height = height;
+        employee.phone = phone;
+        employee.email = email;
         employee.id_card_no = id_card_no;
         employee.passport_no = passport_no;
         employee.date_of_birth = date_of_birth;
@@ -290,9 +780,11 @@ exports.updateEmployee = async (req, res) => {
         employee.district = district;
         employee.commune = commune;
         employee.village = village;
+        employee.present_city = present_city;
+        employee.present_district = present_district;
+        employee.present_commune = present_commune;
+        employee.present_village = present_village;
         employee.isActive = isActive ?? true;
-        employee.present_address = parsedPresentAddress;
-        employee.permanent_address = parsedPermanentAddress;
         employee.family_member = parsedFamilyMembers;
         employee.emergency_contact = parsedEmergencyContacts;
         employee.staff_relationships = parsedStaffRelationships;
@@ -415,7 +907,7 @@ exports.getEducation = async (req, res) => {
 exports.createOrUpdateEducation = async (req, res) => {
     try {
         const { id } = req.params;
-        const { general_education, short_course, language } = req.body;
+        const { general_education, vocational_training, short_course, language } = req.body;
 
         if (!id) {
             return res.status(400).json({ message: 'Employee ID is required.' });
@@ -424,6 +916,7 @@ exports.createOrUpdateEducation = async (req, res) => {
         // Parse JSON fields from FormData
         const parsedLanguages = language ? JSON.parse(language) : [];
         const parsedGeneralEducation = general_education ? JSON.parse(general_education) : [];
+        const parsedVocationalTraining = vocational_training ? JSON.parse(vocational_training) : [];
         const parsedShortCourses = short_course ? JSON.parse(short_course) : [];
 
         // Check if education already exists for this employee
@@ -433,6 +926,7 @@ exports.createOrUpdateEducation = async (req, res) => {
             // Update existing
             education.language = parsedLanguages;
             education.general_education = parsedGeneralEducation;
+            education.vocational_training = parsedVocationalTraining;
             education.short_course = parsedShortCourses;
             education.updatedBy = req.user?._id;
             await education.save();
@@ -534,3 +1028,66 @@ exports.createOrUpdateEmployeeHistory = async (req, res) => {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
+
+
+exports.getLanguages = async (req, res) => {
+    try {
+        const getLanguages = await Languages.find().sort({ updatedAt: -1 });
+        res.json(getLanguages);
+    } catch (error) {
+        console.error('Error:', error.message);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+exports.getLanguage = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const getLanguage = await Languages.findById(id);
+
+        if (!getLanguage) return res.status(404).json({ message: "Category not found" });
+        res.json(getLanguage);
+    } catch (error) {
+        console.error('Error:', error.message);
+        res.status(500).json({ message: err.message });
+    }
+}
+
+exports.createLanguage = async (req, res) => {
+    const { name_en, name_kh } = req.body;
+    try {
+        if (!name_en || !name_kh) {
+            return res.status(400).json({ message: "name field is required" });
+        }
+        const createLanguage = new Languages({ name_en, name_kh, createdBy: req.user.id });
+        await createLanguage.save();
+
+        res.status(201).json({ message: 'success', data: createLanguage });
+    } catch (error) {
+        console.error('Error:', error.message);
+        res.status(500).json({ message: 'Server error' });
+    }
+}
+exports.updateLanguage = async (req, res) => {
+    const { id } = req.params;
+    const { name_en, name_kh } = req.body;
+    try {
+        let getLanguage = await Languages.findById(id);
+        if (!getLanguage) return res.status(404).json({ message: "Job type not found" });
+
+        if (!name_en || !name_kh) {
+            return res.status(400).json({ message: "Both name_en and name_kh are required." });
+        }
+
+        let updateLanguage = await Languages.findByIdAndUpdate(
+            id,
+            { name_en, name_kh, updatedBy: req.user.id },
+            { new: true }
+        );
+
+        res.status(200).json({ message: "success", data: updateLanguage });
+    } catch (error) {
+        console.error('Error:', error.message);
+        res.status(500).json({ message: 'Server error' });
+    }
+}
