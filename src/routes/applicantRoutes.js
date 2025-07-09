@@ -42,7 +42,8 @@ const photoCvUploader = multer({
 router.post('/', photoCvUploader, applicantController.createApplicant);
 router.get('/', applicantController.getAllApplicants);
 router.get('/:id', applicantController.getApplicantById);
-router.put('/:id/status', applicantController.updateApplicantStatus);
+router.get('/by-job/:jobId', applicantController.getApplicantsByJob);
+router.put('/:id', photoCvUploader, applicantController.updateApplicant);
 router.delete('/:id', applicantController.deleteApplicant);
 
 module.exports = router;
