@@ -18,6 +18,7 @@ const communeRoutes = require('./routes/communeRoutes');
 const villageRoutes = require('./routes/villageRoutes');
 const educationLevelRoutes = require('./routes/educationLevelRoutes');
 const employeeDocumentRoutes = require('./routes/employeeDocumentRoutes');
+const payrollRoutes = require('./routes/payrollRoutes');
 require('dotenv').config();
 
 dbConnect();
@@ -73,6 +74,7 @@ app.use('/api/job-postings', require("./routes/jobPostingRoutes"));
 
 app.use('/api/applicants', require("./routes/applicantRoutes"));
 app.use('/api/employee-document', employeeDocumentRoutes);
+app.use('/api/payroll', payrollRoutes);
 app.use('/api/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.get('/download/:folder/:filename', (req, res) => {
