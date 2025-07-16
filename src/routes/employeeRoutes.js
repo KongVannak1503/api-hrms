@@ -36,6 +36,21 @@ router.post(
     employeeController.uploadDocuments
 );
 router.delete('/upload/:id', protect, protectRoute('delete'), employeeController.deleteDocument);
+// Position
+router.get('/position/:employeeId', protect, protectRoute('view'), employeeController.getEmployeePositions);
+
+router.post(
+    '/position/:employeeId',
+    protect,
+    multerUploader.array('documents'),
+    employeeController.createEmployeePosition
+);
+
+
+router.put('/position/:id',
+    multerUploader.array('documents'),
+    employeeController.updateEmployeePosition);
+
 // labor law
 
 router.post(
@@ -91,6 +106,13 @@ router.put(
     protectRoute('update'),
     dynamicUploader('file', 'employees'),
     employeeController.updateEmployee
+);
+
+router.put(
+    '/assign/:id',
+    protect,
+    protectRoute('update'),
+    employeeController.assignPosition
 );
 
 router.get('/:id', protect, protectRoute('view'), employeeController.getEmployee);

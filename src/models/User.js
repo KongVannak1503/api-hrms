@@ -5,7 +5,7 @@ const userSchema = new mongoose.Schema({
     username: { type: String, required: true, unique: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    employeeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Employees' },
+    employeeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' },
     role: { type: mongoose.Schema.Types.ObjectId, ref: 'Role' },
     isActive: { type: Boolean, default: true },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

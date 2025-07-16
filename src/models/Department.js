@@ -1,7 +1,10 @@
 const mongoose = require('mongoose');
 
 const departmentSchema = new mongoose.Schema({
-    title: { type: String, required: true, unique: true },
+    title_en: { type: String, required: true },
+    title_kh: { type: String, required: true },
+    manager: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Employee' }],
+    employee: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Employee' }],
     description: { type: String },
     isActive: { type: Boolean, default: true },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
