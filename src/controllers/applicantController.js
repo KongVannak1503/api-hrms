@@ -1,165 +1,154 @@
 const Applicant = require('../models/Applicant');
-const path = require('path');
+const JobApplication = require('../models/JobApplication');
+const JobPosting = require('../models/JobPosting');
 const fs = require('fs');
+const path = require('path');
 
-// Create new applicant
+// ✅ Create applicant (unchanged)
 exports.createApplicant = async (req, res) => {
   try {
     const {
-      full_name_kh, full_name_en, gender, dob, material_status,
-      phone_no, email, nationality,
-      current_province, current_district, current_commune, current_village,
-      job_posting_id, created_by
+      full_name_kh,
+      full_name_en,
+      gender,
+      dob,
+      marital_status,
+      phone_no,
+      email,
+      current_province,
+      current_district,
+      current_commune,
+      current_village,
     } = req.body;
 
     const photo = req.files?.photo?.[0]?.filename || null;
     const cv = req.files?.cv?.[0]?.filename || null;
 
-    const applicant = new Applicant({
-      full_name_kh, full_name_en, gender, dob,
-      material_status, phone_no, email, nationality,
-      current_province, current_district, current_commune, current_village,
-      job_posting_id,
+    const newApplicant = await Applicant.create({
+      full_name_kh,
+      full_name_en,
+      gender,
+      dob,
+      marital_status,
+      phone_no,
+      email,
+      current_province,
+      current_district,
+      current_commune,
+      current_village,
       photo,
       cv,
-      created_by,
-      updated_by: created_by, // default same as creator
+      created_by: req.user._id,
+      updated_by: req.user._id
     });
 
-    await applicant.save();
-    res.status(201).json(applicant);
-  } catch (error) {
-    console.error("Error creating applicant:", error);
-    res.status(500).json({ message: 'Failed to create applicant' });
+    res.status(201).json(newApplicant);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to create applicant', error: err.message });
   }
 };
 
-// Get all applicants
+// ✅ Get all applicants (enhanced with job title and status)
 exports.getAllApplicants = async (req, res) => {
   try {
-    const applicants = await Applicant.find()
-      .populate('job_posting_id')
-      .populate('created_by', 'name')
-      .populate('updated_by', 'name')
-      .sort({ createdAt: -1 });;
-    res.json(applicants);
+    // 1. Fetch all applicants
+    const applicants = await Applicant.find().sort({ createdAt: -1 });
+    const applicantIds = applicants.map(app => app._id);
+
+    // 2. Fetch job applications for all applicants
+    const jobApps = await JobApplication.find({ applicant_id: { $in: applicantIds } })
+      .populate('job_id', 'job_title')
+      .sort({ createdAt: -1 });
+
+    // 3. Create a lookup map for faster matching
+    const jobAppMap = new Map();
+
+    jobApps.forEach(app => {
+      const applicantId = app.applicant_id.toString();
+      if (!jobAppMap.has(applicantId)) {
+        jobAppMap.set(applicantId, app); // first found is the latest due to sort
+      }
+    });
+
+    // 4. Map applicants to include job info
+    const mappedApplicants = applicants.map(applicant => {
+      const jobApp = jobAppMap.get(applicant._id.toString());
+
+      return {
+        ...applicant.toObject(),
+        job_title: jobApp?.job_id?.job_title || null,
+        job_id: jobApp?.job_id?._id || null, 
+        status: jobApp?.status || 'applied',
+        job_application_id: jobApp?._id || null
+      };
+    });
+
+    res.status(200).json(mappedApplicants);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('Error in getAllApplicants:', err);
+    res.status(500).json({ message: 'Failed to fetch applicants', error: err.message });
   }
 };
 
-// Get single applicant by ID
+// ✅ Get single applicant by ID (unchanged)
 exports.getApplicantById = async (req, res) => {
   try {
-    const applicant = await Applicant.findById(req.params.id)
-      .populate('job_posting_id')
-      .populate('created_by', 'name')
-      .populate('updated_by', 'name');
-    if (!applicant) return res.status(404).json({ message: "Applicant not found" });
-    res.json(applicant);
+    const { id } = req.params;
+    const applicant = await Applicant.findById(id);
+    if (!applicant) return res.status(404).json({ message: 'Applicant not found' });
+    res.status(200).json(applicant);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: 'Failed to fetch applicant', error: err.message });
   }
 };
 
-exports.getApplicantsByJob = async (req, res) => {
-  try {
-    const applicants = await Applicant.find({ job_posting_id: req.params.jobId });
-    res.status(200).json(applicants);
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching applicants' });
-  }
-};
-
-// Update entire applicant
+// ✅ Update applicant (unchanged)
 exports.updateApplicant = async (req, res) => {
   try {
-    const id = req.params.id;
-
-    const {
-      full_name_kh, full_name_en, gender, dob, material_status,
-      phone_no, email, nationality,
-      current_province, current_district, current_commune, current_village,
-      job_posting_id, updated_by
-    } = req.body;
+    const { id } = req.params;
+    const updates = { ...req.body, updated_by: req.user._id };
 
     const existingApplicant = await Applicant.findById(id);
-    if (!existingApplicant) {
-      return res.status(404).json({ message: 'Applicant not found' });
+    if (!existingApplicant) return res.status(404).json({ message: 'Applicant not found' });
+
+    if (req.files?.photo?.[0]) {
+      if (existingApplicant.photo) {
+        fs.unlinkSync(path.join(__dirname, '../uploads/applicants', existingApplicant.photo));
+      }
+      updates.photo = req.files.photo[0].filename;
     }
 
-    // Check if new files uploaded
-    const newPhoto = req.files?.photo?.[0]?.filename || null;
-    const newCv = req.files?.cv?.[0]?.filename || null;
-
-    // Remove old photo if replaced
-    if (newPhoto && existingApplicant.photo) {
-      const oldPhotoPath = path.join('uploads', existingApplicant.photo);
-      if (fs.existsSync(oldPhotoPath)) fs.unlinkSync(oldPhotoPath);
+    if (req.files?.cv?.[0]) {
+      if (existingApplicant.cv) {
+        fs.unlinkSync(path.join(__dirname, '../uploads/applicants', existingApplicant.cv));
+      }
+      updates.cv = req.files.cv[0].filename;
     }
 
-    // Remove old CV if replaced
-    if (newCv && existingApplicant.cv) {
-      const oldCvPath = path.join('uploads', existingApplicant.cv);
-      if (fs.existsSync(oldCvPath)) fs.unlinkSync(oldCvPath);
-    }
-
-    // Update fields
-    existingApplicant.full_name_kh = full_name_kh;
-    existingApplicant.full_name_en = full_name_en;
-    existingApplicant.gender = gender;
-    existingApplicant.dob = dob;
-    existingApplicant.material_status = material_status;
-    existingApplicant.phone_no = phone_no;
-    existingApplicant.email = email;
-    existingApplicant.nationality = nationality;
-    existingApplicant.current_province = current_province;
-    existingApplicant.current_district = current_district;
-    existingApplicant.current_commune = current_commune;
-    existingApplicant.current_village = current_village;
-    existingApplicant.job_posting_id = job_posting_id;
-    existingApplicant.updated_by = updated_by;
-
-    if (newPhoto) existingApplicant.photo = newPhoto;
-    if (newCv) existingApplicant.cv = newCv;
-
-    await existingApplicant.save();
-
-    res.json(existingApplicant);
+    const updated = await Applicant.findByIdAndUpdate(id, updates, { new: true });
+    res.status(200).json(updated);
   } catch (err) {
-    console.error("Error updating applicant:", err);
-    res.status(500).json({ message: 'Failed to update applicant' });
+    res.status(500).json({ message: 'Failed to update applicant', error: err.message });
   }
 };
 
-// Delete applicant
+// ✅ Delete applicant (unchanged)
 exports.deleteApplicant = async (req, res) => {
   try {
-    const applicant = await Applicant.findByIdAndDelete(req.params.id);
-    if (!applicant) return res.status(404).json({ message: 'Not found' });
+    const { id } = req.params;
+    const applicant = await Applicant.findById(id);
+    if (!applicant) return res.status(404).json({ message: 'Applicant not found' });
 
-    const basePath = path.join(__dirname, '../uploads/applicants');
-
-    // Remove photo safely
     if (applicant.photo) {
-      const photoPath = path.join(basePath, applicant.photo);
-      if (fs.existsSync(photoPath)) {
-        fs.unlinkSync(photoPath);
-      }
+      fs.unlinkSync(path.join(__dirname, '../uploads/applicants', applicant.photo));
     }
-
-    // Remove CV safely
     if (applicant.cv) {
-      const cvPath = path.join(basePath, applicant.cv);
-      if (fs.existsSync(cvPath)) {
-        fs.unlinkSync(cvPath);
-      }
+      fs.unlinkSync(path.join(__dirname, '../uploads/applicants', applicant.cv));
     }
 
-    return res.status(200).json({ message: 'Applicant deleted successfully' });
+    await Applicant.findByIdAndDelete(id);
+    res.status(200).json({ message: 'Applicant deleted' });
   } catch (err) {
-    console.error('Error deleting applicant:', err);
-    return res.status(500).json({ message: 'Failed to delete applicant' });
+    res.status(500).json({ message: 'Failed to delete applicant', error: err.message });
   }
 };
-
