@@ -33,7 +33,7 @@ const path = require('path');
 
 app.use(cors({
     origin: process.env.CLIENT_URL,
-    methods: ['GET', 'POST', 'DELETE', 'PUT'],
+    methods: ['GET', 'POST', 'DELETE', 'PUT', 'PATCH'],
     credentials: true
 }));
 // app.use(cors({
@@ -71,6 +71,13 @@ app.use('/api/villages', villageRoutes);
 app.use('/api/education-level', educationLevelRoutes);
 app.use('/api/job-types', require("./routes/jobTypeRoutes"));
 app.use('/api/job-postings', require("./routes/jobPostingRoutes"));
+
+app.use('/api/job-applications', require("./routes/jobApplicationRoutes"));
+app.use('/api/test-assignments', require('./routes/testAssignmentRoutes'));
+app.use('/api/interview', require('./routes/interviewRoutes'));
+
+app.use('/api/test-types', require('./routes/testTypeRoutes'));
+app.use('/api/questions', require('./routes/questionRoutes'));
 
 app.use('/api/applicants', require("./routes/applicantRoutes"));
 app.use('/api/employee-document', employeeDocumentRoutes);
