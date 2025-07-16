@@ -11,6 +11,7 @@ const EmpBodyBook = require('../models/EmployeeBodyBook');
 const EmpNssfDoc = require('../models/EmployeeNssfDocument');
 const EmpNssf = require('../models/EmployeeNssf');
 const EmpHealthBook = require('../models/EmployeeHealthBook');
+const EmpPosition = require('../models/EmployeePosition');
 const languages = require('../models/Languages');
 const iconv = require('iconv-lite');
 const Languages = require('../models/Languages');
@@ -99,6 +100,158 @@ exports.deleteDocument = async (req, res) => {
     }
 };
 
+// Position
+
+exports.getEmployeePositions = async (req, res) => {
+    try {
+        const { employeeId } = req.params;
+
+        const empPosition = await EmpPosition.find({ employeeId })
+            .populate('createdBy', 'username')
+            .sort({ createdAt: -1 });
+
+        res.json(empPosition);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
+
+exports.createEmployeePosition = async (req, res) => {
+    try {
+        const { employeeId } = req.params;
+        const uploadedFiles = req.files;
+        const { name, positionId, joinDate } = req.body;
+
+        console.log('req.body:', req.body);
+        console.log('req.files:', req.files);
+
+        // Map uploaded files into your document objects
+        const documents = (uploadedFiles || []).map(file => {
+            // Decode filename if needed
+            const fixedName = iconv.decode(Buffer.from(file.originalname, 'latin1'), 'utf8');
+
+            return {
+                name: fixedName,
+                filename: file.filename,
+                type: file.mimetype,
+                size: (file.size / (1024 * 1024)).toFixed(2) + 'MB',
+                path: `uploads/documents/${file.filename}`,
+                extension: fixedName.split('.').pop()
+            };
+        });
+
+        const newPosition = new EmpPosition({
+            name,
+            positionId,
+            employeeId,
+            joinDate: new Date(joinDate), // make sure date is Date type
+            documents,
+            createdBy: req.user?._id
+        });
+
+        await newPosition.save();
+
+        res.status(201).json({
+            message: 'Employee position created successfully',
+            data: newPosition
+        });
+    } catch (error) {
+        console.error('Create error:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
+exports.updateEmployeePosition = async (req, res) => {
+    try {
+        const { id } = req.params; // position ID
+        const uploadedFiles = req.files;
+        const { name, positionId, joinDate, existingDocumentsJson } = req.body;
+
+        const existing = await EmpPosition.findById(id);
+        if (!existing) return res.status(404).json({ message: 'Position not found' });
+
+        let existingDocuments = [];
+        if (existingDocumentsJson) {
+            try {
+                existingDocuments = JSON.parse(existingDocumentsJson);
+            } catch (err) {
+                console.warn('Error parsing existingDocumentsJson', err);
+            }
+        }
+
+        const newDocuments = (uploadedFiles || []).map(file => {
+            const fixedName = iconv.decode(Buffer.from(file.originalname, 'latin1'), 'utf8');
+            return {
+                name: fixedName,
+                filename: file.filename,
+                type: file.mimetype,
+                size: (file.size / (1024 * 1024)).toFixed(2) + 'MB',
+                path: `uploads/documents/${file.filename}`,
+                extension: fixedName.split('.').pop()
+            };
+        });
+
+        if (newDocuments.length > 0) {
+            // Delete old files from disk
+            if (existing.documents && existing.documents.length > 0) {
+                existing.documents.forEach(doc => {
+                    const filePath = path.join(__dirname, '..', doc.path);
+                    fs.unlink(filePath, (err) => {
+                        if (err) console.error('Failed to delete old file:', filePath, err);
+                        else console.log('Deleted old file:', filePath);
+                    });
+                });
+            }
+
+            existing.documents = newDocuments;
+        } else {
+            existing.documents = existingDocuments;
+        }
+
+        existing.name = name;
+        existing.positionId = positionId;
+        existing.joinDate = new Date(joinDate);
+
+        await existing.save();
+
+        return res.status(200).json({
+            message: 'Employee position updated successfully',
+            data: existing
+        });
+    } catch (error) {
+        console.error('Update error:', error);
+        return res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
+exports.deleteEmployeePosition = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const document = await EmpPosition.findById(id);
+        if (!document) {
+            return res.status(404).json({ message: "Document not found" });
+        }
+
+        // Delete the file from the filesystem
+        const filePath = path.join(__dirname, '..', document.path);
+        fs.unlink(filePath, (err) => {
+            if (err) {
+                console.warn('File not found or already deleted:', document.path);
+            }
+        });
+
+        // Delete from DB
+        await EmpPosition.findByIdAndDelete(id);
+
+        res.json({ message: "Document deleted successfully" });
+    } catch (error) {
+        console.error('Error deleting:', error.message);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
+// end position
 // NSSF
 exports.getEmployeeNssfDoc = async (req, res) => {
     try {
@@ -569,7 +722,18 @@ exports.getEmployees = async (req, res) => {
     try {
         const getEmployees = await Employee.find()
             .populate('image_url')
-            .populate('createdBy', 'username').sort({ updatedAt: -1 });
+            .populate('createdBy', 'username')
+            .populate('subBonus')
+            .populate({
+                path: 'positionId',
+                select: 'title department',
+                populate: {
+                    path: 'department',
+                    model: 'Department',
+                    select: 'title_en title_kh'
+                }
+            })
+            .sort({ updatedAt: -1 });
         res.json(getEmployees);
     } catch (error) {
         console.error('Error:', error.message);
@@ -581,7 +745,16 @@ exports.getEmployee = async (req, res) => {
     const { id } = req.params;
     try {
         const getEmployee = await Employee.findById(id).populate('image_url')
-            .populate('createdBy', 'username');
+            .populate('subBonus')
+            .populate('createdBy', 'username').populate({
+                path: 'positionId',
+                select: 'title department',
+                populate: {
+                    path: 'department',
+                    model: 'Department',
+                }
+            });
+
         if (!getEmployee) return res.status(404).json({ message: "Category not found" });
         res.json(getEmployee);
     } catch (error) {
@@ -601,9 +774,11 @@ exports.createEmployee = async (req, res) => {
             last_name_kh,
             gender,
             phone,
+            bloodType,
             email,
             id_card_no,
             passport_no,
+            joinDate,
             date_of_birth,
             place_of_birth,
             nationality,
@@ -649,8 +824,8 @@ exports.createEmployee = async (req, res) => {
         // Parse JSON fields from FormData
         const parsedFamilyMembers = family_members ? JSON.parse(family_members) : [];
         const parsedEmergencyContacts = emergency_contact ? JSON.parse(emergency_contact) : [];
-        const nameKh = first_name_kh + " " + last_name_kh;
-        const nameEn = last_name_en + " " + first_name_en;
+        const nameKh = last_name_kh + " " + first_name_kh;
+        const nameEn = first_name_en + " " + last_name_en;
         // Create employee
         const createEmployee = new Employee({
             employee_id,
@@ -662,9 +837,11 @@ exports.createEmployee = async (req, res) => {
             name_kh: nameKh,
             gender,
             phone,
+            bloodType,
             email,
             id_card_no,
             passport_no,
+            joinDate,
             date_of_birth,
             place_of_birth,
             nationality,
@@ -714,9 +891,11 @@ exports.updateEmployee = async (req, res) => {
             last_name_kh,
             gender,
             phone,
+            bloodType,
             email,
             date_of_birth,
             place_of_birth,
+            joinDate,
             nationality,
             maritalStatus,
             city,
@@ -756,8 +935,8 @@ exports.updateEmployee = async (req, res) => {
         const parsedGeneralEducation = general_education ? JSON.parse(general_education) : [];
         const parsedShortCourses = short_course ? JSON.parse(short_course) : [];
 
-        const nameKh = first_name_kh + " " + last_name_kh;
-        const nameEn = last_name_en + " " + first_name_en;
+        const nameKh = last_name_kh + " " + first_name_kh;
+        const nameEn = first_name_en + " " + last_name_en;
 
         // Update the fields
         employee.employee_id = employee_id;
@@ -769,9 +948,11 @@ exports.updateEmployee = async (req, res) => {
         employee.last_name_kh = last_name_kh;
         employee.gender = gender;
         employee.phone = phone;
+        employee.bloodType = bloodType;
         employee.email = email;
         employee.id_card_no = id_card_no;
         employee.passport_no = passport_no;
+        employee.joinDate = joinDate;
         employee.date_of_birth = date_of_birth;
         employee.place_of_birth = place_of_birth;
         employee.nationality = nationality;
@@ -875,6 +1056,30 @@ exports.deleteEmployee = async (req, res) => {
     }
 };
 
+exports.assignPosition = async (req, res) => {
+    const { id } = req.params;
+    const { positionId } = req.body;
+    try {
+        let getEmployee = await Employee.findById(id);
+        if (!getEmployee) return res.status(404).json({ message: "Employee not found" });
+
+        if (!positionId) {
+            return res.status(400).json({ message: "positionId is required" });
+        }
+
+        const updateEmployee = await Employee.findByIdAndUpdate(
+            id,
+            { positionId, updatedBy: req.user.id },
+            { new: true }
+        ).populate('image_url').populate('createdBy', 'username')
+            .populate('positionId', 'title');
+
+        res.status(200).json({ message: "success", data: updateEmployee });
+    } catch (error) {
+        console.error('Error:', error.message);
+        res.status(500).json({ message: 'Server error' });
+    }
+}
 
 // General Education
 

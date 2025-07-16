@@ -20,6 +20,17 @@ const emergencyContactSchema = new mongoose.Schema({
     relationship: String,
 }, { _id: false });
 
+const suspendSchema = new mongoose.Schema({
+    name: String,
+    filename: String,
+    type: String,
+    size: String,
+    path: String,
+    extension: String,
+    fromDate: Date,
+    toDate: Date,
+}, { _id: false });
+
 
 const employeeSchema = new mongoose.Schema({
     employee_id: { type: String },
@@ -32,13 +43,16 @@ const employeeSchema = new mongoose.Schema({
     gender: { type: String },
     email: { type: String },
     phone: { type: String },
+    bloodType: { type: String },
     id_card_no: { type: String },
     passport_no: { type: String },
     image_url: { type: mongoose.Schema.Types.ObjectId, ref: 'File' },
+    joinDate: { type: Date },
     date_of_birth: { type: Date },
     place_of_birth: { type: String },
     nationality: { type: String },
     maritalStatus: { type: String },
+    positionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Position' },
     city: { type: mongoose.Schema.Types.ObjectId, ref: 'City' },
     district: { type: mongoose.Schema.Types.ObjectId, ref: 'District' },
     commune: { type: mongoose.Schema.Types.ObjectId, ref: 'Commune' },
@@ -56,8 +70,11 @@ const employeeSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
+    suspend: [],
 
+    status: { type: String },
     isActive: { type: Boolean, default: true },
+    subBonus: [{ type: mongoose.Schema.Types.ObjectId, ref: 'SubBonus' }],
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });

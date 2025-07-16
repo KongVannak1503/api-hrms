@@ -19,7 +19,16 @@ exports.getUsers = async (req, res) => {
 exports.getUser = async (req, res) => {
     try {
 
-        const getUsers = await User.findById(req.params.id).populate('role', 'name').select('-password');
+        const getUsers = await User.findById(req.params.id)
+            .populate({
+                path: 'employeeId',
+                populate: {
+                    path: 'image_url',
+                    model: 'File',
+                },
+                select: 'name name_kh image_url',
+            })
+            .populate('role', 'name').select('-password');
         res.json(getUsers);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -41,11 +50,11 @@ exports.register = async (req, res) => {
 
         const user = new User({ username, email, employeeId, role, password, isActive, createdBy: req.user.id, });
 
-        await user.save(); // Password will be hashed automatically by the model
-        await user.populate('role', 'name').select('-password');
+        let createUser = await user.save(); // Password will be hashed automatically by the model
+        const getUser = await User.findById(createUser?._id).populate('role', 'name').select('-password');
         res.status(201).json({
             status: 'success',
-            data: user
+            data: getUser
         });
     } catch (err) {
         console.error('Register error:', err.message);
