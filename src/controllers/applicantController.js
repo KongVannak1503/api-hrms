@@ -152,3 +152,53 @@ exports.deleteApplicant = async (req, res) => {
     res.status(500).json({ message: 'Failed to delete applicant', error: err.message });
   }
 };
+
+// ✅ Get only applicants with status "shortlisted"
+exports.getShortlistedApplicants = async (req, res) => {
+  try {
+    console.log("✅ Fetching all applicants...");
+    const applicants = await Applicant.find().sort({ createdAt: -1 });
+    const applicantIds = applicants.map(app => app._id);
+
+    console.log("✅ Fetching job applications with status 'shortlisted'...");
+    const jobApps = await JobApplication.find({
+      applicant_id: { $in: applicantIds },
+      status: 'shortlisted'
+    })
+      .populate('job_id', 'job_title') // ✅ Make sure JobPosting model exists
+      .sort({ createdAt: -1 });
+
+    console.log("✅ Mapping job applications...");
+    const jobAppMap = new Map();
+    jobApps.forEach(app => {
+      const applicantId = app.applicant_id?.toString(); // Make sure applicant_id is populated
+      if (applicantId && !jobAppMap.has(applicantId)) {
+        jobAppMap.set(applicantId, app);
+      }
+    });
+
+    console.log("✅ Filtering shortlisted applicants...");
+    const shortlistedApplicants = applicants
+      .filter(applicant => jobAppMap.has(applicant._id.toString()))
+      .map(applicant => {
+        const jobApp = jobAppMap.get(applicant._id.toString());
+        return {
+          ...applicant.toObject(),
+          job_title: jobApp?.job_id?.job_title || null,
+          job_id: jobApp?.job_id?._id || null,
+          status: jobApp?.status,
+          job_application_id: jobApp?._id || null
+        };
+      });
+
+    console.log("✅ Final result:", shortlistedApplicants.length);
+    res.status(200).json(shortlistedApplicants);
+
+  } catch (err) {
+    console.error('❌ Error in getShortlistedApplicants:', err);
+    res.status(500).json({
+      message: 'Failed to fetch shortlisted applicants',
+      error: err.message
+    });
+  }
+};

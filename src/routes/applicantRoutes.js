@@ -41,6 +41,7 @@ const applicantUpload = multer({
 
 // Routes
 router.get('/', protect, applicantController.getAllApplicants);
+router.get('/shortlisted', protect, applicantController.getShortlistedApplicants);
 router.get('/:id', protect, applicantController.getApplicantById);
 router.post('/', protect, applicantUpload, applicantController.createApplicant);
 router.put('/:id', protect, applicantUpload, applicantController.updateApplicant);
