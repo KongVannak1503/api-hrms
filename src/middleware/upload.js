@@ -37,7 +37,7 @@ function dynamicUploader(fieldName = 'file', subfolder = 'default') {
         } else {
             cb(new Error('Only images or PDFs are allowed'));
         }
-    };
+    }; 
 
     return multer({ storage, fileFilter }).single(fieldName);
 }
