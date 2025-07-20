@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
 
 const positionSchema = new mongoose.Schema({
-    title: { type: String, required: true, unique: true },
+    title_en: { type: String, required: true },
+    title_kh: { type: String, required: true },
     description: String,
     department: { type: mongoose.Schema.Types.ObjectId, ref: 'Department', required: true },
     isActive: { type: Boolean, default: true },

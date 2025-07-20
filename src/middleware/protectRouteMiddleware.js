@@ -7,39 +7,48 @@ const normalizeRoute = (route) => {
 const protectRoute = (requiredAction) => {
     return async (req, res, next) => {
         try {
-
             const userRoleId = req.user?.role;
 
             if (!userRoleId) {
-                return res.status(401).json({ message: 'No role assigned to user' });
+                return res.status(401).json({ message: 'Unauthorized: No role assigned to user.' });
             }
 
             const role = await Role.findById(userRoleId).populate('permissions.permissionId');
 
             if (!role) {
-                return res.status(403).json({ message: 'Role not found' });
+                return res.status(403).json({ message: 'Forbidden: Role not found.' });
             }
 
-            const currentRoute = normalizeRoute(req.originalUrl.split('?')[0]);
+            const currentRoute = normalizeRoute(req.baseUrl + req.route.path);
 
-            const permissionForRoute = role.permissions.find(p => {
-                if (!p.permissionId || !p.permissionId.route) return false;
+            const hasPermission = role.permissions.some(p => {
+                if (!p.isActive || !p.permissionId || !p.permissionId.route) return false;
+
                 const permissionRoute = normalizeRoute(p.permissionId.route);
-                return currentRoute.startsWith(permissionRoute);
+                const matchesRoute = currentRoute.startsWith(permissionRoute);
+                const hasAction = p.actions.includes(requiredAction);
+
+                return matchesRoute && hasAction;
             });
 
-            if (!permissionForRoute) {
-                return res.status(403).json({ message: 'No permission for this route' });
-            }
-
-            if (!permissionForRoute.actions.includes(requiredAction)) {
-                return res.status(403).json({ message: `Action '${requiredAction}' not allowed` });
+            if (!hasPermission) {
+                return res.status(403).json({ message: `Forbidden: You do not have '${requiredAction}' permission on this route.` });
             }
 
             next();
         } catch (error) {
-            console.error('❌ Error in protectRoute:', error);
-            res.status(500).json({ message: 'Server error' });
+            // Detailed error logging to console
+            console.error('❌ Error in protectRoute middleware:', {
+                message: error.message,
+                stack: error.stack,
+                userId: req.user?._id,
+                userRoleId: req.user?.role,
+                routeAttempted: req.originalUrl,
+                requiredAction,
+                timestamp: new Date().toISOString()
+            });
+
+            res.status(500).json({ message: 'Internal Server Error' });
         }
     };
 };

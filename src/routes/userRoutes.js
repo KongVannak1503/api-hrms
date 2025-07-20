@@ -5,19 +5,20 @@ const userController = require('../controllers/userController');
 const { protect } = require('../middleware/authMiddleware');
 const protectRoute = require('../middleware/protectRouteMiddleware');
 const { dynamicUploader } = require('../middleware/upload');
+const protectByRoute = require('../middleware/protectByRouteMiddleware');
 
 
 // router.post('/logout', userController.logout);
-router.get('/', protect, protectRoute('view'), userController.getUsers);
-router.get('/:id', protect, protectRoute('view'), userController.getUser);
-router.put('/:id', protect, protectRoute('update'), userController.updateUser);
-router.post('/', protect, protectRoute('update'), userController.register);
-router.delete('/:id', protect, protectRoute('delete'), userController.deleteUser);
+router.get('/', protect, protectByRoute('/api/settings', 'view'), userController.getUsers);
+router.get('/:id', protect, protectByRoute('/api/settings', 'view'), userController.getUser);
+router.put('/:id', protect, protectByRoute('/api/settings', 'update'), userController.updateUser);
+router.post('/', protect, protectByRoute('/api/settings', 'create'), userController.register);
+router.delete('/:id', protect, protectByRoute('/api/settings', 'delete'), userController.deleteUser);
 
 router.post(
     '/upload',
     protect,
-    protectRoute('update'),
+    protectByRoute('/api/settings', 'update'),
     (req, res, next) => dynamicUploader(fieldName = 'file', folder = 'users')(req, res, next), // use 'file'
     userController.uploadSingleFile
 );

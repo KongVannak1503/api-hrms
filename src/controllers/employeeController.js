@@ -15,6 +15,7 @@ const EmpPosition = require('../models/EmployeePosition');
 const languages = require('../models/Languages');
 const iconv = require('iconv-lite');
 const Languages = require('../models/Languages');
+const { model } = require('mongoose');
 
 exports.getEmployeeDocuments = async (req, res) => {
     try {
@@ -723,10 +724,18 @@ exports.getEmployees = async (req, res) => {
         const getEmployees = await Employee.find()
             .populate('image_url')
             .populate('createdBy', 'username')
-            .populate('subBonus')
+            .populate({
+                path: 'subBonus',
+                model: 'SubBonus',
+                populate: {
+                    path: 'bonusId',
+                    model: 'Bonus',
+                    select: 'payDate'
+                }
+            })
             .populate({
                 path: 'positionId',
-                select: 'title department',
+                model: 'Position',
                 populate: {
                     path: 'department',
                     model: 'Department',
@@ -745,13 +754,22 @@ exports.getEmployee = async (req, res) => {
     const { id } = req.params;
     try {
         const getEmployee = await Employee.findById(id).populate('image_url')
-            .populate('subBonus')
+            .populate({
+                path: 'subBonus',
+                model: 'SubBonus',
+                populate: {
+                    path: 'bonusId',
+                    model: 'Bonus',
+                    select: 'payDate'
+                }
+            })
             .populate('createdBy', 'username').populate({
                 path: 'positionId',
-                select: 'title department',
+                model: 'Position',
                 populate: {
                     path: 'department',
                     model: 'Department',
+                    select: 'title_en title_kh'
                 }
             });
 
@@ -794,6 +812,7 @@ exports.createEmployee = async (req, res) => {
             isActive,
             family_members,
             emergency_contact,
+            status,
         } = req.body;
 
         // Validate required fields
@@ -859,6 +878,7 @@ exports.createEmployee = async (req, res) => {
             family_member: parsedFamilyMembers,
             emergency_contact: parsedEmergencyContacts,
             createdBy: req.user?._id,
+            status,
         });
 
         await createEmployee.save();
@@ -918,7 +938,8 @@ exports.updateEmployee = async (req, res) => {
             short_course,
             id_card_no,
             passport_no,
-            file
+            file,
+            status,
             // file is handled via req.file (multipart)
         } = req.body;
 
@@ -973,6 +994,7 @@ exports.updateEmployee = async (req, res) => {
         employee.employment_history = parsedEmploymentHistory;
         employee.general_education = parsedGeneralEducation;
         employee.short_course = parsedShortCourses;
+        employee.status = status;
 
         // Handle image upload
         if (req.file) {
@@ -1072,7 +1094,15 @@ exports.assignPosition = async (req, res) => {
             { positionId, updatedBy: req.user.id },
             { new: true }
         ).populate('image_url').populate('createdBy', 'username')
-            .populate('positionId', 'title');
+            .populate({
+                path: 'positionId',
+                model: 'Position',
+                populate: {
+                    path: 'department',
+                    model: 'Department',
+                    select: 'title_en title_kh'
+                }
+            });
 
         res.status(200).json({ message: "success", data: updateEmployee });
     } catch (error) {
