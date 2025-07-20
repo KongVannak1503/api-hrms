@@ -8,34 +8,26 @@ const User = require('../models/User');
 
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/yourdb';
 
+// Full actions for most permissions
 const fullActions = ['view', 'create', 'update', 'delete'];
+const fullActionsNoCreate = ['view', 'update', 'delete'];
 
+// New permissions list including 'profile' for employees
 const allPermissions = [
-    { name: 'dashboard', route: '/api/dashboard', actions: ['view'] },
-    { name: 'users', route: '/api/users' },
-    { name: 'roles', route: '/api/roles' },
-    { name: 'categories', route: '/api/categories' },
-    { name: 'positions', route: '/api/positions' },
-    { name: 'skills', route: '/api/skills' },
-    { name: 'employees', route: '/api/employees' },
-    { name: 'recruiting', route: '/api/recruiting' },
-    { name: 'jobs', route: '/api/jobs' },
-    { name: 'job-applications', route: '/api/job-applications' },
-    { name: 'post', route: '/api/posts' },
-    { name: 'organizations', route: '/api/organizations' },
-    { name: 'departments', route: '/api/departments' },
-    { name: 'cities', route: '/api/cities' },
-    { name: 'districts', route: '/api/districts' },
-    { name: 'communes', route: '/api/communes' },
-    { name: 'villages', route: '/api/villages' },
-    { name: 'education-level', route: '/api/education-level' },
+    { name: "dashboard", route: "/api/dashboard", actions: ["view"], roles: ["admin", "manager", "line manager", "employee"] },
+    { name: "users", route: "/api/users", actions: fullActions, roles: ["admin"] },
+    { name: "roles", route: "/api/roles", actions: fullActionsNoCreate, roles: ["admin"] },
+    { name: "employees", route: "/api/employees", actions: [...fullActions, "profile"], roles: ["admin", "manager", "line manager", "employee"] },
+    { name: "recruiting", route: "/api/recruiting", actions: fullActions, roles: ["admin", "manager", "line manager"] },
+    { name: "jobs", route: "/api/jobs", actions: fullActions, roles: ["admin", "manager", "line manager"] },
+    { name: "job-applications", route: "/api/job-applications", actions: fullActions, roles: ["admin", "manager", "line manager"] },
+    { name: "payroll", route: "/api/payroll", actions: fullActions, roles: ["admin"] },
+    { name: "applicants", route: "/api/applicants", actions: fullActions, roles: ["admin", "manager", "line manager"] },
+    { name: "job-postings", route: "/api/job-postings", actions: fullActions, roles: ["admin", "manager", "line manager"] },
+    { name: "interview", route: "/api/interview", actions: fullActions, roles: ["admin", "manager", "line manager"] },
+    { name: "test-assignments", route: "/api/test-assignments", actions: fullActions, roles: ["admin", "manager", "line manager"] },
+    { name: "setting", route: "/api/settings", actions: fullActions, roles: ["admin"] },
 ];
-
-// Ensure each has actions
-const permissionsData = allPermissions.map((perm) => ({
-    ...perm,
-    actions: perm.actions || fullActions,
-}));
 
 async function seed() {
     try {
@@ -45,67 +37,62 @@ async function seed() {
         });
         console.log('✅ Connected to MongoDB');
 
-        // Clean up
+        // Clear existing data
         await Permission.deleteMany({});
         await Role.deleteMany({});
         await User.deleteMany({});
 
-        // 1. Insert permissions
-        const permissions = await Permission.insertMany(permissionsData);
+        // Insert permissions
+        const permissions = await Permission.insertMany(allPermissions);
         console.log(`✅ Inserted ${permissions.length} permissions`);
 
-        // Helper
-        const getPermissionByRoute = (route) =>
-            permissions.find((p) => p.route === route);
+        // Roles names including line manager
+        const roleNames = ['admin', 'manager', 'line manager', 'employee'];
 
-        // 2. Roles
-        const rolesData = [
-            {
-                name: 'admin',
-                permissions: permissions.map((p) => ({
-                    permissionId: p._id,
-                    actions: p.actions,
-                })),
-            },
-            {
-                name: 'editor',
-                permissions: [
-                    {
-                        permissionId: getPermissionByRoute('/api/posts')._id,
-                        actions: ['view', 'create', 'update', 'delete'],
-                    },
-                    {
-                        permissionId: getPermissionByRoute('/api/dashboard')._id,
-                        actions: ['view'],
-                    },
-                ],
-            },
-            {
-                name: 'viewer',
-                permissions: [
-                    {
-                        permissionId: getPermissionByRoute('/api/posts')._id,
-                        actions: ['view'],
-                    },
-                    {
-                        permissionId: getPermissionByRoute('/api/dashboard')._id,
-                        actions: ['view'],
-                    },
-                ],
-            },
-        ];
+        // Create roles with permissions filtered by role and action adjusted for employees on 'employees'
+        const rolesData = roleNames.map(roleName => {
+            const allowedPermissions = permissions.filter(p => p.roles.includes(roleName));
+
+            return {
+                name: roleName,
+                permissions: allowedPermissions.map(p => {
+                    if (p.name === 'employees') {
+                        // employee role only gets 'profile' action on employees permission
+                        if (roleName === 'employee') {
+                            return {
+                                permissionId: p._id,
+                                actions: ['profile'],
+                                isActive: true,
+                            };
+                        }
+                        // admin, manager, and line manager get full actions on employees
+                        return {
+                            permissionId: p._id,
+                            actions: p.actions,
+                            isActive: true,
+                        };
+                    }
+
+                    // All other permissions - full actions
+                    return {
+                        permissionId: p._id,
+                        actions: p.actions,
+                        isActive: true,
+                    };
+                }),
+            };
+        });
 
         const roles = await Role.insertMany(rolesData);
         console.log(`✅ Inserted ${roles.length} roles`);
 
-        // 3. Admin user
-        const hashedPassword = await bcrypt.hash('admin123', 10);
-        const adminRole = roles.find((r) => r.name === 'admin');
+        // Create an admin user
+        const adminRole = roles.find(r => r.name === 'admin');
 
         const adminUser = await User.create({
             username: 'admin',
-            email: 'admin@gmail.com',
-            password: "admin123",
+            email: 'admin@example.com',
+            password: 'admin123', // consider hashing here if your User model doesn't hash automatically
             role: adminRole._id,
             isActive: true,
         });

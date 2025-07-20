@@ -3,13 +3,14 @@ const router = express.Router();
 const departmentController = require('../controllers/departmentController');
 const { protect } = require('../middleware/authMiddleware');
 const protectRoute = require('../middleware/protectRouteMiddleware');
+const protectByRoute = require('../middleware/protectByRouteMiddleware');
 
-router.get('/', protect, protectRoute('view'), departmentController.getDepartments);
+router.get('/', protect, protectByRoute('/api/settings', 'view'), departmentController.getDepartments);
 router.get('/view', protect, departmentController.getDepartments);
-router.post('/', protect, protectRoute('create'), departmentController.createDepartment);
-router.get('/:id', protect, protectRoute('view'), departmentController.getDepartment);
-router.put('/:id', protect, protectRoute('update'), departmentController.updateDepartment);
-router.put('/assignee/:id', protect, protectRoute('update'), departmentController.assignManager);
-router.delete('/:id', protect, protectRoute('delete'), departmentController.deleteDepartment);
+router.post('/', protect, protectByRoute('/api/settings', 'create'), departmentController.createDepartment);
+router.get('/:id', protect, protectByRoute('/api/settings', 'view'), departmentController.getDepartment);
+router.put('/:id', protect, protectByRoute('/api/settings', 'update'), departmentController.updateDepartment);
+router.put('/assignee/:id', protect, protectByRoute('/api/settings', 'update'), departmentController.assignManager);
+router.delete('/:id', protect, protectByRoute('/api/settings', 'delete'), departmentController.deleteDepartment);
 
 module.exports = router;

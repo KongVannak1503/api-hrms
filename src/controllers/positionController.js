@@ -39,16 +39,16 @@ exports.getPositionsByDepartment = async (req, res) => {
 };
 
 exports.createPosition = async (req, res) => {
-    const { title, description, department, isActive } = req.body;
+    const { title_en, title_kh, description, department, isActive } = req.body;
     try {
         console.log(req.body);
 
-        if (!title || !department) {
+        if (!title_en || !title_kh || !department) {
             return res.status(400).json({ message: "Title and department are required" });
         }
 
         const newPosition = new Position({
-            title,
+            title_en, title_kh,
             description,
             department,
             isActive,
@@ -66,19 +66,19 @@ exports.createPosition = async (req, res) => {
 }
 exports.updatePosition = async (req, res) => {
     const { id } = req.params;
-    const { title, description, department, isActive } = req.body;
+    const { title_en, title_kh, description, department, isActive } = req.body;
     try {
         const position = await Position.findById(id);
         if (!position) return res.status(404).json({ message: "Position not found" });
 
-        if (!title || !department) {
+        if (!title_en || !title_kh || !department) {
             return res.status(400).json({ message: "Title and department are required" });
         }
 
         const updated = await Position.findByIdAndUpdate(
             id,
             {
-                title,
+                title_en, title_kh,
                 description,
                 department,
                 isActive,
@@ -86,7 +86,7 @@ exports.updatePosition = async (req, res) => {
             },
             { new: true }
         ).populate('department', 'title')
-         .populate('updatedBy', 'username');
+            .populate('updatedBy', 'username');
 
         res.status(200).json({ message: "success", data: updated });
     } catch (error) {
@@ -101,7 +101,7 @@ exports.deletePosition = async (req, res) => {
         const position = await Position.findByIdAndDelete(id);
 
         if (!position) return res.status(404).json({ message: "Position not found" });
-        
+
         res.json({ message: "Deleted successfully!" });
     } catch (error) {
         console.error('Error:', error.message);
