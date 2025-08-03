@@ -13,6 +13,8 @@ const { getMulterUploaderEmployeeBooks } = require('../middleware/uploadEmployee
 const uploadMul = multer();
 const multerUploader = getMulterUploader('documents');
 
+router.get('/manager', protect, employeeController.getEmployeesByManager);
+
 router.get('/language', protect, employeeController.getLanguages);
 router.get('/language/:id', protect, employeeController.getLanguage);
 
@@ -72,6 +74,7 @@ router.post(
     employeeController.uploadNssf
 );
 router.delete('/nssf/:id', protect, protectRoute('delete'), employeeController.deleteNssf);
+router.put('/nssf/update', protect, protectRoute('update'), employeeController.updateNssf);
 router.get('/nssf/:employeeId', protect, protectRoute('view'), employeeController.getEmployeeNssf);
 router.delete('/nssf/doc/:id', protect, protectRoute('delete'), employeeController.deleteNssfDoc);
 router.get('/nssf/doc/:employeeId', protect, protectRoute('view'), employeeController.getEmployeeNssfDoc);

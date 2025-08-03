@@ -10,7 +10,7 @@ const protectByRoute = require('../middleware/protectByRouteMiddleware');
 
 router.get('/', protect, protectByRoute('/api/settings', 'view'), positionController.getPositions);
 router.post('/', protect, protectByRoute('/api/settings', 'create'), positionController.createPosition);
-router.get('/:id', protect, protectByRoute('/api/settings', 'view'), positionController.getPosition);
+router.get('/:id', protect, positionController.getPosition);
 router.get('/by-department/:departmentId', protect, protectByRoute('/api/settings', 'view'), positionController.getPositionsByDepartment);
 router.put('/:id', protect, protectByRoute('/api/settings', 'update'), positionController.updatePosition);
 router.delete('/:id', protect, protectByRoute('/api/settings', 'delete'), positionController.deletePosition);

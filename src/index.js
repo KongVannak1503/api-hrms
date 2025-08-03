@@ -18,6 +18,7 @@ const communeRoutes = require('./routes/communeRoutes');
 const villageRoutes = require('./routes/villageRoutes');
 const educationLevelRoutes = require('./routes/educationLevelRoutes');
 const employeeDocumentRoutes = require('./routes/employeeDocumentRoutes');
+const kpiTemplateRoute = require('./routes/kpiTemplateRoute');
 const payrollRoutes = require('./routes/payrollRoutes');
 require('dotenv').config();
 
@@ -78,10 +79,12 @@ app.use('/api/interview', require('./routes/interviewRoutes'));
 
 app.use('/api/test-types', require('./routes/testTypeRoutes'));
 app.use('/api/questions', require('./routes/questionRoutes'));
+app.use('/api/appraisals', require('./routes/AppraisalRoutes'));
 
 app.use('/api/applicants', require("./routes/applicantRoutes"));
 app.use('/api/employee-document', employeeDocumentRoutes);
 app.use('/api/payroll', payrollRoutes);
+app.use('/api/kpi', kpiTemplateRoute);
 app.use('/api/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.get('/download/:folder/:filename', (req, res) => {

@@ -15,6 +15,8 @@ const EmpPosition = require('../models/EmployeePosition');
 const languages = require('../models/Languages');
 const iconv = require('iconv-lite');
 const Languages = require('../models/Languages');
+const Department = require('../models/Department')
+const Position = require('../models/Position')
 const { model } = require('mongoose');
 
 exports.getEmployeeDocuments = async (req, res) => {
@@ -288,8 +290,6 @@ exports.uploadNssf = async (req, res) => {
         const { employeeId } = req.params;
         const uploadedFiles = req.files;
         const { title, claimTitle, claimDate, claimType, claimOther } = req.body;
-        console.log(req.bod);
-
         // ✅ Always save NSSF record first
         const nssfRecord = new EmpNssf({
             employeeId,
@@ -335,6 +335,45 @@ exports.uploadNssf = async (req, res) => {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
+
+exports.updateNssf = async (req, res) => {
+    try {
+        const data = req.body[0]; // Access the first item in the array
+        const { title, claimTitle, claimDate, claimType, claimOther, _id } = data;
+
+
+        if (!_id) {
+            return res.status(400).json({ message: 'Missing NSSF record ID' });
+        }
+
+        const updatedNssf = await EmpNssf.findByIdAndUpdate(
+            _id,
+            {
+                title,
+                claimTitle,
+                claimDate,
+                claimType,
+                claimOther,
+                updatedBy: req.user?._id,
+            },
+            { new: true } // Return the updated document
+        );
+
+        if (!updatedNssf) {
+            return res.status(404).json({ message: 'NSSF record not found' });
+        }
+        console.log('_id:', updatedNssf);
+
+        res.status(200).json({
+            message: 'Claim updated successfully',
+            data: updatedNssf,
+        });
+    } catch (error) {
+        console.error('Update error:', error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
 
 
 exports.deleteNssfDoc = async (req, res) => {
@@ -1326,3 +1365,65 @@ exports.updateLanguage = async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 }
+
+// manager
+exports.getEmployeesByManager = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        // Find departments where user is one of the managers
+        const managedDepartments = await Department.find({ manager: '687f344440177054ef17bc0b' }).select('_id');
+
+        console.log(managedDepartments);
+        const departmentIds = managedDepartments.map(dep => dep._id);
+
+        if (departmentIds.length === 0) {
+            // User manages no departments => empty list
+            return res.status(200).json({ employees: [] });
+        }
+
+        // Find positions within those departments
+        const positions = await Position.find({ department: { $in: departmentIds } }).select('_id');
+
+        const positionIds = positions.map(pos => pos._id);
+
+        if (positionIds.length === 0) {
+            return res.status(200).json({ employees: [] });
+        }
+
+        // Find employees assigned to those positions
+        // const employees = await Employee.find({ positionId: { $in: positionIds } })
+        //     .populate({
+        //         path: 'positionId',
+        //         populate: { path: 'department' }
+        //     });
+
+        const employees = await Employee.find({ positionId: { $in: positionIds } })
+            .populate('image_url')
+            .populate('createdBy', 'username')
+            .populate({
+                path: 'subBonus',
+                model: 'SubBonus',
+                populate: {
+                    path: 'bonusId',
+                    model: 'Bonus',
+                    select: 'payDate'
+                }
+            })
+            .populate({
+                path: 'positionId',
+                model: 'Position',
+                populate: {
+                    path: 'department',
+                    model: 'Department',
+                    select: 'title_en title_kh'
+                }
+            })
+            .sort({ updatedAt: -1 });
+
+        return res.status(200).json({ employees });
+    } catch (error) {
+        console.error('Error fetching managed employees:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+};

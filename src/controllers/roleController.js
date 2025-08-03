@@ -3,7 +3,7 @@ const Role = require('../models/Role');
 // Create a new role
 exports.createRole = async (req, res) => {
     try {
-        const { name, permissions } = req.body;
+        const { name, role, permissions } = req.body;
 
         // Basic validation
         if (!name || !Array.isArray(permissions)) {
@@ -13,6 +13,7 @@ exports.createRole = async (req, res) => {
 
         const newRole = new Role({
             name,
+            role,
             permissions: permissions.map(p => ({
                 permissionId: p.permissionId,
                 actions: p.actions,
@@ -24,8 +25,6 @@ exports.createRole = async (req, res) => {
         const savedRole = await newRole.save();
         // res.status(201).json({ message: 'Role created successfully' });
         res.status(201).json({ message: 'Role created successfully', data: savedRole });
-        console.log(savedRole);
-
     } catch (error) {
         console.error('Error creating role:', error);
         if (error.code === 11000) {
@@ -45,6 +44,34 @@ exports.getRoles = async (req, res) => {
     }
 };
 
+exports.getRolesName = async (req, res) => {
+    try {
+        const { action } = req.params;
+
+        const filter = action ? { name: action } : {};
+
+        const roles = await Role.find(filter).populate('permissions.permissionId');
+
+        res.json(roles);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// county
+
+exports.countRoleCount = async (req, res) => {
+    const { name } = req.params;
+
+    try {
+        const count = await Role.countDocuments({ name });
+        res.json({ name, count });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+
 // Get single role
 exports.getRoleById = async (req, res) => {
     try {
@@ -59,13 +86,14 @@ exports.getRoleById = async (req, res) => {
 // Update role
 exports.updateRole = async (req, res) => {
     try {
-        const { name, permissions } = req.body;
+        const { name, role, permissions } = req.body;
         const { id } = req.params; // Role ID from URL
 
         const updatedRole = await Role.findByIdAndUpdate(
             id,
             {
                 name,
+                role,
                 permissions,
                 updatedBy: req.user.id,
             },
