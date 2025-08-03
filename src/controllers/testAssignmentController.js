@@ -1,4 +1,5 @@
 const TestAssignment = require('../models/TestAssignment');
+const JobApplication = require('../models/JobApplication'); 
 const fs = require('fs');
 const path = require('path');
 
@@ -179,23 +180,40 @@ exports.deleteTestAssignment = async (req, res) => {
 // ❗ Recommended: Separate route for cancel
 exports.cancelTestAssignment = async (req, res) => {
   try {
-    const updated = await TestAssignment.findByIdAndUpdate(
+    // 1. Update TestAssignment status to 'rejected'
+    const assignment = await TestAssignment.findByIdAndUpdate(
       req.params.id,
       {
-        status: 'cancelled',
+        status: 'rejected', // ✅ Set status here
         updated_by: req.user._id
       },
       { new: true }
     );
 
-    if (!updated) return res.status(404).json({ message: 'Test assignment not found' });
+    if (!assignment) {
+      return res.status(404).json({ message: 'Test assignment not found' });
+    }
 
-    // 👉 Optional: update applicant status to 'cancelled' or 'rejected'
-    // await Applicant.findByIdAndUpdate(updated.applicant_id, { status: 'cancelled' });
+    // 2. Update related JobApplication to 'rejected'
+    const jobApp = await JobApplication.findOneAndUpdate(
+      { applicant_id: assignment.applicant_id },
+      { status: 'rejected', updated_by: req.user._id },
+      { new: true }
+    );
 
-    res.status(200).json({ message: 'Test cancelled', data: updated });
+    if (!jobApp) {
+      return res.status(404).json({ message: 'Related job application not found' });
+    }
+
+    res.status(200).json({
+      message: 'Test assignment rejected and applicant status updated',
+      test: assignment,
+      jobApplication: jobApp
+    });
+
   } catch (err) {
-    res.status(500).json({ message: 'Failed to cancel test', error: err.message });
+    console.error("❌ cancelTestAssignment error:", err);
+    res.status(500).json({ message: 'Failed to reject test assignment', error: err.message });
   }
 };
 
