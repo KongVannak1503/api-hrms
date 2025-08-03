@@ -6,7 +6,7 @@ const permissionSchema = new mongoose.Schema({
     actions: [{ type: String, required: true }],
     roles: {
         type: [String],
-        enum: ['admin', 'line manager', 'manager', 'employee'],
+        enum: ['admin', 'hr', 'upper manager', 'manager', 'employee'],
         required: true,
         default: ['admin'], // optional default
     }

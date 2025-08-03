@@ -117,7 +117,7 @@ exports.deleteDepartment = async (req, res) => {
 const mongoose = require('mongoose');
 exports.assignManager = async (req, res) => {
     const { id } = req.params;
-    const { manager = [], employee = [] } = req.body;
+    const { manager = [] } = req.body;
 
     try {
         const department = await Department.findById(id);
@@ -137,11 +137,9 @@ exports.assignManager = async (req, res) => {
                 });
 
         const managerIds = toObjectIds(manager);
-        const employeeIds = toObjectIds(employee);
 
         // Replace existing arrays with new ones
         department.manager = managerIds;
-        department.employee = employeeIds;
         department.updatedBy = req.user.id;
 
         await department.save();
@@ -150,14 +148,6 @@ exports.assignManager = async (req, res) => {
         const updatedDepartment = await Department.findById(id)
             .populate({
                 path: 'manager',
-                populate: {
-                    path: 'image_url',
-                    model: 'File',
-                },
-                select: 'name name_kh image_url',
-            })
-            .populate({
-                path: 'employee',
                 populate: {
                     path: 'image_url',
                     model: 'File',

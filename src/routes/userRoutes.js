@@ -10,7 +10,7 @@ const protectByRoute = require('../middleware/protectByRouteMiddleware');
 
 // router.post('/logout', userController.logout);
 router.get('/', protect, protectByRoute('/api/settings', 'view'), userController.getUsers);
-router.get('/:id', protect, protectByRoute('/api/settings', 'view'), userController.getUser);
+router.get('/:id', protect, userController.getUser);
 router.put('/:id', protect, protectByRoute('/api/settings', 'update'), userController.updateUser);
 router.post('/', protect, protectByRoute('/api/settings', 'create'), userController.register);
 router.delete('/:id', protect, protectByRoute('/api/settings', 'delete'), userController.deleteUser);

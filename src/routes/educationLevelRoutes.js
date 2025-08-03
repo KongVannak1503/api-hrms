@@ -4,10 +4,10 @@ const educationLevelController = require('../controllers/educationLevelControlle
 const { protect } = require('../middleware/authMiddleware');
 const protectRoute = require('../middleware/protectRouteMiddleware');
 
-router.get('/', protect, protectRoute('view'), educationLevelController.getEducationLevels);
+router.get('/', protect, educationLevelController.getEducationLevels);
 router.get('/view', protect, educationLevelController.getEducationLevels);
 router.post('/', protect, protectRoute('create'), educationLevelController.createEducationLevel);
-router.get('/:id', protect, protectRoute('view'), educationLevelController.getEducationLevel);
+router.get('/:id', protect, educationLevelController.getEducationLevel);
 router.put('/:id', protect, protectRoute('update'), educationLevelController.updateEducationLevel);
 router.delete('/:id', protect, protectRoute('delete'), educationLevelController.deleteEducationLevel);
 
