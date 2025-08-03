@@ -77,7 +77,6 @@ app.use('/api/test-assignments', require('./routes/testAssignmentRoutes'));
 app.use('/api/interview', require('./routes/interviewRoutes'));
 
 app.use('/api/test-types', require('./routes/testTypeRoutes'));
-app.use('/api/questions', require('./routes/questionRoutes'));
 
 app.use('/api/applicants', require("./routes/applicantRoutes"));
 app.use('/api/employee-document', employeeDocumentRoutes);

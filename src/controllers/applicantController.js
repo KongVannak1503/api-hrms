@@ -1,6 +1,7 @@
 const Applicant = require('../models/Applicant');
 const JobApplication = require('../models/JobApplication');
 const JobPosting = require('../models/JobPosting');
+const TestAssignment = require('../models/TestAssignment');
 const fs = require('fs');
 const path = require('path');
 
@@ -55,31 +56,43 @@ exports.getAllApplicants = async (req, res) => {
     const applicants = await Applicant.find().sort({ createdAt: -1 });
     const applicantIds = applicants.map(app => app._id);
 
-    // 2. Fetch job applications for all applicants
+    // 2. Fetch job applications
     const jobApps = await JobApplication.find({ applicant_id: { $in: applicantIds } })
       .populate('job_id', 'job_title')
       .sort({ createdAt: -1 });
 
-    // 3. Create a lookup map for faster matching
-    const jobAppMap = new Map();
+    // 3. Fetch test assignments (latest by createdAt)
+    const testAssignments = await TestAssignment.find({ applicant_id: { $in: applicantIds } })
+      .sort({ createdAt: -1 }); // latest first
 
+    const jobAppMap = new Map();
+    const testAssignmentMap = new Map();
+
+    // 👉 Map first (latest) job application per applicant
     jobApps.forEach(app => {
-      const applicantId = app.applicant_id.toString();
-      if (!jobAppMap.has(applicantId)) {
-        jobAppMap.set(applicantId, app); // first found is the latest due to sort
-      }
+      const aid = app.applicant_id.toString();
+      if (!jobAppMap.has(aid)) jobAppMap.set(aid, app);
     });
 
-    // 4. Map applicants to include job info
+    // 👉 Map first (latest) test assignment per applicant
+    testAssignments.forEach(ta => {
+      const aid = ta.applicant_id.toString();
+      if (!testAssignmentMap.has(aid)) testAssignmentMap.set(aid, ta.status); // only status needed
+    });
+
+    // 4. Map final response
     const mappedApplicants = applicants.map(applicant => {
-      const jobApp = jobAppMap.get(applicant._id.toString());
+      const aid = applicant._id.toString();
+      const jobApp = jobAppMap.get(aid);
+      const testStatus = testAssignmentMap.get(aid);
 
       return {
         ...applicant.toObject(),
         job_title: jobApp?.job_id?.job_title || null,
-        job_id: jobApp?.job_id?._id || null, 
+        job_id: jobApp?.job_id?._id || null,
         status: jobApp?.status || 'applied',
-        job_application_id: jobApp?._id || null
+        job_application_id: jobApp?._id || null,
+        test_assignment_status: testStatus || null // ✅ add this field
       };
     });
 
@@ -94,9 +107,20 @@ exports.getAllApplicants = async (req, res) => {
 exports.getApplicantById = async (req, res) => {
   try {
     const { id } = req.params;
+
     const applicant = await Applicant.findById(id);
-    if (!applicant) return res.status(404).json({ message: 'Applicant not found' });
-    res.status(200).json(applicant);
+    if (!applicant) {
+      return res.status(404).json({ message: 'Applicant not found' });
+    }
+
+    // 👇 Find job application related to this applicant
+    const jobApplications = await JobApplication.find({ applicant_id: id })
+      .populate('job_id', 'job_title'); // optional: populate job title
+
+    res.status(200).json({
+      applicant,
+      jobApplications, // array – use first if only one
+    });
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch applicant', error: err.message });
   }
@@ -136,19 +160,37 @@ exports.updateApplicant = async (req, res) => {
 exports.deleteApplicant = async (req, res) => {
   try {
     const { id } = req.params;
+
     const applicant = await Applicant.findById(id);
-    if (!applicant) return res.status(404).json({ message: 'Applicant not found' });
+    if (!applicant) {
+      return res.status(404).json({ message: 'Applicant not found' });
+    }
 
+    // ✅ Delete photo file if exists
     if (applicant.photo) {
-      fs.unlinkSync(path.join(__dirname, '../uploads/applicants', applicant.photo));
-    }
-    if (applicant.cv) {
-      fs.unlinkSync(path.join(__dirname, '../uploads/applicants', applicant.cv));
+      const photoPath = path.join(__dirname, '../uploads/applicants', applicant.photo);
+      if (fs.existsSync(photoPath)) {
+        fs.unlinkSync(photoPath);
+      }
     }
 
+    // ✅ Delete CV file if exists
+    if (applicant.cv) {
+      const cvPath = path.join(__dirname, '../uploads/applicants', applicant.cv);
+      if (fs.existsSync(cvPath)) {
+        fs.unlinkSync(cvPath);
+      }
+    }
+
+    // ✅ Delete related job applications
+    await JobApplication.deleteMany({ applicant_id: id });
+
+    // ✅ Delete the applicant
     await Applicant.findByIdAndDelete(id);
-    res.status(200).json({ message: 'Applicant deleted' });
+
+    res.status(200).json({ message: 'Applicant and related data deleted successfully' });
   } catch (err) {
+    console.error('❌ Delete applicant failed:', err.message);
     res.status(500).json({ message: 'Failed to delete applicant', error: err.message });
   }
 };

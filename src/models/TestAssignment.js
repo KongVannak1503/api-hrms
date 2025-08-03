@@ -10,7 +10,7 @@ const testAssignmentSchema = new mongoose.Schema({
   start_at: { type: Date, required: true },
   duration_min: { type: Number, default: 60 },
   location: { type: String },
-  status: { type: String, enum: ['scheduled', 'completed', 'cancelled'], default: 'scheduled' },
+  status: { type: String, enum: ['scheduled', 'completed'], default: 'scheduled' },
   score: { type: Number },
   feedback: { type: String },
   attachment: { type: String },

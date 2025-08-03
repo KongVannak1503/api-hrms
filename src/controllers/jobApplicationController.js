@@ -1,11 +1,9 @@
-// controllers/jobApplicationController.js
-
 const JobApplication = require('../models/JobApplication');
 
-// ✅ Create Job Application (when applicant applies)
+
 exports.createJobApplication = async (req, res) => {
   try {
-    const { job_id, applicant_id } = req.body;
+    const { job_id, applicant_id, applied_date } = req.body;
 
     const existing = await JobApplication.findOne({ job_id, applicant_id });
     if (existing) {
@@ -15,6 +13,7 @@ exports.createJobApplication = async (req, res) => {
     const newApp = await JobApplication.create({
       job_id,
       applicant_id,
+      applied_date: applied_date ? new Date(applied_date) : new Date(), // fallback to now
       status: 'applied',
       updated_by: req.user._id
     });
@@ -39,6 +38,50 @@ exports.getApplicationsByJob = async (req, res) => {
   }
 };
 
+exports.getJobApplicationById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const application = await JobApplication.findById(id)
+      .populate('applicant_id')
+      .populate('job_id');
+
+    if (!application) {
+      return res.status(404).json({ message: 'Job application not found' });
+    }
+
+    res.status(200).json(application);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+exports.updateJobApplication = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { job_id, applicant_id, applied_date } = req.body;
+
+    const updated = await JobApplication.findByIdAndUpdate(
+      id,
+      {
+        job_id,
+        applicant_id,
+        applied_date: applied_date ? new Date(applied_date) : undefined,
+        updated_by: req.user._id
+      },
+      { new: true }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ message: 'Job application not found' });
+    }
+
+    res.status(200).json(updated);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to update job application', error: err.message });
+  }
+};
+
 // ✅ Update status (e.g., from shortlisted → test, etc.)
 exports.updateApplicationStatus = async (req, res) => {
   try {
@@ -57,56 +100,3 @@ exports.updateApplicationStatus = async (req, res) => {
   }
 };
 
-// ✅ Update test score
-exports.updateTestScore = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { test_score } = req.body;
-
-    const updated = await JobApplication.findByIdAndUpdate(
-      id,
-      { test_score, updated_by: req.user._id },
-      { new: true }
-    );
-
-    res.status(200).json(updated);
-  } catch (err) {
-    res.status(500).json({ message: 'Failed to update test score', error: err.message });
-  }
-};
-
-// ✅ Update interview score
-exports.updateInterviewScore = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { interview_score } = req.body;
-
-    const updated = await JobApplication.findByIdAndUpdate(
-      id,
-      { interview_score, updated_by: req.user._id },
-      { new: true }
-    );
-
-    res.status(200).json(updated);
-  } catch (err) {
-    res.status(500).json({ message: 'Failed to update interview score', error: err.message });
-  }
-};
-
-// ✅ Update final score
-exports.updateFinalScore = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { final_score } = req.body;
-
-    const updated = await JobApplication.findByIdAndUpdate(
-      id,
-      { final_score, updated_by: req.user._id },
-      { new: true }
-    );
-
-    res.status(200).json(updated);
-  } catch (err) {
-    res.status(500).json({ message: 'Failed to update final score', error: err.message });
-  }
-};

@@ -750,6 +750,31 @@ exports.getEmployees = async (req, res) => {
     }
 };
 
+exports.getAllEmployees = async (req, res) => {
+  try {
+    const employees = await Employee.find({ isActive: true }) // optional filter
+      .select('name_en first_name_en last_name_en positionId') // fetch only needed fields
+      .populate({
+        path: 'positionId',
+        select: 'title_en'
+      });
+
+    // Map for cleaner dropdown
+    const simplified = employees.map(emp => ({
+      _id: emp._id,
+      name_en: emp.name_en,
+      first_name_en: emp.first_name_en,
+      last_name_en: emp.last_name_en,
+      position: emp.positionId?.title_en || ''
+    }));
+
+    res.json(simplified);
+  } catch (error) {
+    console.error('Error:', error.message);
+    res.status(500).json({ message: error.message });
+  }
+};
+
 exports.getEmployee = async (req, res) => {
     const { id } = req.params;
     try {
