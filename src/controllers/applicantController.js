@@ -92,7 +92,8 @@ exports.getAllApplicants = async (req, res) => {
         job_id: jobApp?.job_id?._id || null,
         status: jobApp?.status || 'applied',
         job_application_id: jobApp?._id || null,
-        test_assignment_status: testStatus || null // ✅ add this field
+        applied_date: jobApp?.applied_date || null,
+        test_assignment_status: testStatus || null,
       };
     });
 
