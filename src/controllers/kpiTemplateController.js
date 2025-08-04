@@ -457,10 +457,11 @@ exports.createIndividualDay = async (req, res) => {
 
 exports.getIndividualThisDay = async (req, res) => {
     try {
-        const { employee, templateId } = req.params;
+        const { employee, dayId, templateId } = req.params;
 
         const submission = await KpiSubmissionDay.findOne({
             employee: employee,
+            appraisalDay: dayId,
             templateId: templateId,
         }).populate('templateId');
 

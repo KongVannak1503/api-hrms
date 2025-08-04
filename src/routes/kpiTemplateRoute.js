@@ -42,7 +42,7 @@ router.get('/individual/month/:employee/form/:templateId', protect, kpiTemplateC
 // Days
 router.post('/individual/day', protect, kpiTemplateController.createIndividualDay);
 router.put('/individual/day/:id', protect, kpiTemplateController.updateIndividualDay);
-router.get('/individual/day/:employee/form/:templateId', protect, kpiTemplateController.getIndividualThisDay);
+router.get('/individual/:employee/day/:dayId/form/:templateId', protect, kpiTemplateController.getIndividualThisDay);
 // end Days
 
 router.post('/individual', protect, kpiTemplateController.createIndividual);
