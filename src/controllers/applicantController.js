@@ -5,7 +5,7 @@ const TestAssignment = require('../models/TestAssignment');
 const fs = require('fs');
 const path = require('path');
 
-// ✅ Create applicant (unchanged)
+// Create applicant (unchanged)
 exports.createApplicant = async (req, res) => {
   try {
     const {
@@ -49,7 +49,7 @@ exports.createApplicant = async (req, res) => {
   }
 };
 
-// ✅ Get all applicants (enhanced with job title and status)
+// Get all applicants (enhanced with job title and status)
 exports.getAllApplicants = async (req, res) => {
   try {
     // 1. Fetch all applicants
@@ -77,14 +77,19 @@ exports.getAllApplicants = async (req, res) => {
     // 👉 Map first (latest) test assignment per applicant
     testAssignments.forEach(ta => {
       const aid = ta.applicant_id.toString();
-      if (!testAssignmentMap.has(aid)) testAssignmentMap.set(aid, ta.status); // only status needed
+      if (!testAssignmentMap.has(aid)) {
+        testAssignmentMap.set(aid, {
+          _id: ta._id,
+          status: ta.status
+        });
+      }
     });
 
     // 4. Map final response
     const mappedApplicants = applicants.map(applicant => {
       const aid = applicant._id.toString();
       const jobApp = jobAppMap.get(aid);
-      const testStatus = testAssignmentMap.get(aid);
+      const testAssignment = testAssignmentMap.get(aid) || {};
 
       return {
         ...applicant.toObject(),
@@ -93,7 +98,8 @@ exports.getAllApplicants = async (req, res) => {
         status: jobApp?.status || 'applied',
         job_application_id: jobApp?._id || null,
         applied_date: jobApp?.applied_date || null,
-        test_assignment_status: testStatus || null,
+        test_assignment_id: testAssignment._id || null, // ✅ NEW
+        test_assignment_status: testAssignment.status || null
       };
     });
 
@@ -104,7 +110,7 @@ exports.getAllApplicants = async (req, res) => {
   }
 };
 
-// ✅ Get single applicant by ID (unchanged)
+// Get single applicant by ID (unchanged)
 exports.getApplicantById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -127,7 +133,7 @@ exports.getApplicantById = async (req, res) => {
   }
 };
 
-// ✅ Update applicant (unchanged)
+// Update applicant (unchanged)
 exports.updateApplicant = async (req, res) => {
   try {
     const { id } = req.params;
@@ -157,7 +163,7 @@ exports.updateApplicant = async (req, res) => {
   }
 };
 
-// ✅ Delete applicant (unchanged)
+// Delete applicant (unchanged)
 exports.deleteApplicant = async (req, res) => {
   try {
     const { id } = req.params;
@@ -196,7 +202,7 @@ exports.deleteApplicant = async (req, res) => {
   }
 };
 
-// ✅ Get only applicants with status "shortlisted"
+// Get only applicants with status "shortlisted"
 exports.getShortlistedApplicants = async (req, res) => {
   try {
     console.log("✅ Fetching all applicants...");
