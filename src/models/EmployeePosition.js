@@ -14,7 +14,7 @@ const employeePositionSchema = new mongoose.Schema({
     positionId: { type: String },
     employeeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee', required: true },
     joinDate: { type: Date, required: true },
-    documents: [documentSchema],
+    documents: documentSchema,
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });

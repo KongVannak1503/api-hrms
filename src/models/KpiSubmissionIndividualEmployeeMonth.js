@@ -4,6 +4,7 @@ const Schema = mongoose.Schema;
 const KpiSubmissionSchema = new Schema({
     employee: { type: Schema.Types.ObjectId, ref: 'Employee', required: true },
     templateId: { type: Schema.Types.ObjectId, ref: 'KpiTemplate', required: true },
+    appraisalMonth: { type: Schema.Types.ObjectId, ref: 'AppraisalMonth', required: true },
     scores: [
         {
             subId: { type: Schema.Types.ObjectId, required: true },
@@ -16,4 +17,4 @@ const KpiSubmissionSchema = new Schema({
 });
 
 
-module.exports = mongoose.model('KpiSubmissionIndividualMonthEmp', KpiSubmissionSchema);
+module.exports = mongoose.model('KpiSubmissionIndividualEmployeeMonth', KpiSubmissionSchema);

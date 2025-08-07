@@ -44,13 +44,13 @@ router.get('/position/:employeeId', protect, protectRoute('view'), employeeContr
 router.post(
     '/position/:employeeId',
     protect,
-    multerUploader.array('documents'),
+    (req, res, next) => dynamicUploader(fieldName = 'file', folder = 'positions')(req, res, next),
     employeeController.createEmployeePosition
 );
 
 
 router.put('/position/:id',
-    multerUploader.array('documents'),
+    (req, res, next) => dynamicUploader(fieldName = 'file', folder = 'positions')(req, res, next),
     employeeController.updateEmployeePosition);
 
 // labor law

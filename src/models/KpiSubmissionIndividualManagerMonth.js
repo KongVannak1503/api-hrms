@@ -17,4 +17,4 @@ const KpiSubmissionSchema = new Schema({
 });
 
 
-module.exports = mongoose.model('KpiSubmissionIndividualMonth', KpiSubmissionSchema);
+module.exports = mongoose.model('KpiSubmissionIndividualManagerMonth', KpiSubmissionSchema);

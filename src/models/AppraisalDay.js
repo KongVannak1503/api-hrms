@@ -1,10 +1,8 @@
 const mongoose = require('mongoose');
 
 
-const AppraisalMonthSchema = new mongoose.Schema({
+const AppraisalDaySchema = new mongoose.Schema({
     startDate: { type: Date, required: true },
-    endDate: { type: Date, required: true },
-    announcementDay: { type: Number, required: true },
     department: { type: mongoose.Schema.Types.ObjectId, ref: 'Department' },
     kpiTemplate: { type: mongoose.Schema.Types.ObjectId, ref: 'KpiTemplate' },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
@@ -12,4 +10,4 @@ const AppraisalMonthSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 
-module.exports = mongoose.model('AppraisalMonth', AppraisalMonthSchema);
+module.exports = mongoose.model('AppraisalDay', AppraisalDaySchema);

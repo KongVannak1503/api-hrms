@@ -3,7 +3,7 @@ const Position = require("../models/Position");
 // Get all position
 exports.getPositions = async (req, res) => {
     try {
-        const positions = await Position.find().populate('department', 'title').populate('createdBy', 'username');
+        const positions = await Position.find().populate('department', 'title_en title_kh').populate('createdBy', 'username');
 
         res.json(positions);
     } catch (error) {
