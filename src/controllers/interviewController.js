@@ -38,7 +38,7 @@ exports.createInterview = async (req, res) => {
   }
 };
 
-// ✅ Get all interviews
+// Get all interviews
 exports.getAllInterviews = async (req, res) => {
   try {
     const interviews = await Interview.find()
@@ -84,7 +84,7 @@ exports.getAllInterviews = async (req, res) => {
   }
 };
 
-// ✅ Get interview by ID
+// Get interview by ID
 exports.getInterviewById = async (req, res) => {
   try {
     const interview = await Interview.findById(req.params.id)
@@ -147,7 +147,7 @@ exports.rescheduleInterview = async (req, res) => {
   }
 };
 
-// ✅ Update interview score, feedback, status, attachment
+// Update interview score, feedback, status, attachment
 exports.updateInterviewResult = async (req, res) => {
   try {
 
@@ -196,7 +196,51 @@ exports.updateInterviewResult = async (req, res) => {
   }
 };
 
-// ✅ Cancel interview
+exports.updateInterviewDecision = async (req, res) => {
+  try {
+    const { id } = req.params; // Interview ID
+    const { decision } = req.body;
+
+    // Validate decision
+    if (!['hired', 'reserve', 'rejected'].includes(decision)) {
+      return res.status(400).json({ message: 'Invalid decision value' });
+    }
+
+    // Find Interview
+    const interview = await Interview.findById(id);
+    if (!interview) return res.status(404).json({ message: 'Interview not found' });
+
+    // Update related Job Application
+    const jobApp = await JobApplication.findOneAndUpdate(
+      {
+        job_id: interview.job_id,
+        applicant_id: interview.applicant_id
+      },
+      { status: decision },
+      { new: true }
+    );
+
+    if (!jobApp) {
+      return res.status(404).json({ message: 'Job Application not found' });
+    }
+
+    // Save final decision in interview
+    interview.final_decision = decision;
+    await interview.save();
+
+    return res.status(200).json({
+      message: `Decision "${decision}" has been applied.`,
+      interview,
+      jobApplication: jobApp
+    });
+
+  } catch (err) {
+    console.error('❌ Error in updateInterviewDecision:', err.message);
+    return res.status(500).json({ message: 'Failed to update decision', error: err.message });
+  }
+};
+
+// Cancel interview
 exports.cancelInterview = async (req, res) => {
   try {
     const updated = await Interview.findByIdAndUpdate(

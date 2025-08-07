@@ -26,6 +26,11 @@ const interviewSchema = new mongoose.Schema({
     enum: ['scheduled', 'completed'],
     default: 'scheduled'
   },
+  final_decision: {
+    type: String,
+    enum: ['hired', 'reserve', 'rejected'],
+    default: null
+  },
 
 }, { timestamps: true });
 

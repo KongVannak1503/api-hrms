@@ -10,6 +10,7 @@ router.get('/:id', protect, interviewController.getInterviewById);
 router.put('/:id', protect, interviewController.updateInterview);
 router.put('/:id/result', protect, upload,  interviewController.updateInterviewResult);
 router.put('/:id/reschedule', protect, interviewController.rescheduleInterview);
+router.put('/:id/decision', protect, interviewController.updateInterviewDecision);
 
 router.put('/:id/cancel', protect, interviewController.cancelInterview);
 
