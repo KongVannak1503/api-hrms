@@ -123,33 +123,30 @@ exports.getEmployeePositions = async (req, res) => {
 exports.createEmployeePosition = async (req, res) => {
     try {
         const { employeeId } = req.params;
-        const uploadedFiles = req.files;
         const { name, positionId, joinDate } = req.body;
 
-        console.log('req.body:', req.body);
-        console.log('req.files:', req.files);
 
-        // Map uploaded files into your document objects
-        const documents = (uploadedFiles || []).map(file => {
-            // Decode filename if needed
-            const fixedName = iconv.decode(Buffer.from(file.originalname, 'latin1'), 'utf8');
+        let document = null;
 
-            return {
-                name: fixedName,
-                filename: file.filename,
-                type: file.mimetype,
-                size: (file.size / (1024 * 1024)).toFixed(2) + 'MB',
-                path: `uploads/documents/${file.filename}`,
-                extension: fixedName.split('.').pop()
+        if (req.file) {
+            const { filename, size, mimetype, originalname } = req.file;
+            const folder = 'positions';
+            document = {
+                name: originalname,
+                filename,
+                size: (size / (1024 * 1024)).toFixed(2) + 'MB',
+                type: mimetype,
+                path: `uploads/${folder}/${filename}`,
+                createdBy: req.user?._id,
             };
-        });
+        }
 
         const newPosition = new EmpPosition({
             name,
             positionId,
             employeeId,
-            joinDate: new Date(joinDate), // make sure date is Date type
-            documents,
+            joinDate: new Date(joinDate),
+            documents: document,
             createdBy: req.user?._id
         });
 
@@ -164,53 +161,60 @@ exports.createEmployeePosition = async (req, res) => {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
-
 exports.updateEmployeePosition = async (req, res) => {
     try {
-        const { id } = req.params; // position ID
-        const uploadedFiles = req.files;
+        const { id } = req.params;
         const { name, positionId, joinDate, existingDocumentsJson } = req.body;
 
         const existing = await EmpPosition.findById(id);
         if (!existing) return res.status(404).json({ message: 'Position not found' });
 
-        let existingDocuments = [];
+        let existingDocument = null;
         if (existingDocumentsJson) {
             try {
-                existingDocuments = JSON.parse(existingDocumentsJson);
+                existingDocument = JSON.parse(existingDocumentsJson);
             } catch (err) {
                 console.warn('Error parsing existingDocumentsJson', err);
             }
         }
 
-        const newDocuments = (uploadedFiles || []).map(file => {
-            const fixedName = iconv.decode(Buffer.from(file.originalname, 'latin1'), 'utf8');
-            return {
-                name: fixedName,
-                filename: file.filename,
-                type: file.mimetype,
-                size: (file.size / (1024 * 1024)).toFixed(2) + 'MB',
-                path: `uploads/documents/${file.filename}`,
-                extension: fixedName.split('.').pop()
-            };
-        });
+        let newDocument = null;
 
-        if (newDocuments.length > 0) {
-            // Delete old files from disk
-            if (existing.documents && existing.documents.length > 0) {
-                existing.documents.forEach(doc => {
-                    const filePath = path.join(__dirname, '..', doc.path);
-                    fs.unlink(filePath, (err) => {
-                        if (err) console.error('Failed to delete old file:', filePath, err);
-                        else console.log('Deleted old file:', filePath);
-                    });
+        if (req.file) {
+            // New file uploaded
+            const { filename, size, mimetype, originalname } = req.file;
+            const folder = 'positions';
+
+            newDocument = {
+                name: originalname,
+                filename,
+                size: (size / (1024 * 1024)).toFixed(2) + 'MB',
+                type: mimetype,
+                path: `uploads/${folder}/${filename}`,
+                createdBy: req.user?._id,
+                extension: originalname.split('.').pop(),
+            };
+
+            // Delete old file if exists
+            if (existing.documents && existing.documents.path) {
+                const oldPath = path.join(__dirname, '..', existing.documents.path);
+                fs.unlink(oldPath, (err) => {
+                    if (err) console.error('Failed to delete old file:', oldPath, err);
+                    else console.log('Deleted old file:', oldPath);
                 });
             }
 
-            existing.documents = newDocuments;
+            existing.documents = newDocument;
+
+        } else if (existingDocument) {
+            // Keep old document data if provided
+            existing.documents = existingDocument;
+
         } else {
-            existing.documents = existingDocuments;
+            // No new file and no document info sent - keep existing or null
+            existing.documents = existing.documents || null;
         }
+
 
         existing.name = name;
         existing.positionId = positionId;
@@ -220,14 +224,13 @@ exports.updateEmployeePosition = async (req, res) => {
 
         return res.status(200).json({
             message: 'Employee position updated successfully',
-            data: existing
+            data: existing,
         });
     } catch (error) {
         console.error('Update error:', error);
         return res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
-
 exports.deleteEmployeePosition = async (req, res) => {
     const { id } = req.params;
 
@@ -790,28 +793,28 @@ exports.getEmployees = async (req, res) => {
 };
 
 exports.getAllEmployees = async (req, res) => {
-  try {
-    const employees = await Employee.find({ isActive: true }) // optional filter
-      .select('name_en first_name_en last_name_en positionId') // fetch only needed fields
-      .populate({
-        path: 'positionId',
-        select: 'title_en'
-      });
+    try {
+        const employees = await Employee.find({ isActive: true }) // optional filter
+            .select('name_en first_name_en last_name_en positionId') // fetch only needed fields
+            .populate({
+                path: 'positionId',
+                select: 'title_en'
+            });
 
-    // Map for cleaner dropdown
-    const simplified = employees.map(emp => ({
-      _id: emp._id,
-      name_en: emp.name_en,
-      first_name_en: emp.first_name_en,
-      last_name_en: emp.last_name_en,
-      position: emp.positionId?.title_en || ''
-    }));
+        // Map for cleaner dropdown
+        const simplified = employees.map(emp => ({
+            _id: emp._id,
+            name_en: emp.name_en,
+            first_name_en: emp.first_name_en,
+            last_name_en: emp.last_name_en,
+            position: emp.positionId?.title_en || ''
+        }));
 
-    res.json(simplified);
-  } catch (error) {
-    console.error('Error:', error.message);
-    res.status(500).json({ message: error.message });
-  }
+        res.json(simplified);
+    } catch (error) {
+        console.error('Error:', error.message);
+        res.status(500).json({ message: error.message });
+    }
 };
 
 exports.getEmployee = async (req, res) => {
@@ -827,13 +830,25 @@ exports.getEmployee = async (req, res) => {
                     select: 'payDate'
                 }
             })
+            .populate('present_city', 'name')
+            .populate('city', 'name')
             .populate('createdBy', 'username').populate({
                 path: 'positionId',
                 model: 'Position',
                 populate: {
                     path: 'department',
                     model: 'Department',
-                    select: 'title_en title_kh'
+                    populate: {
+                        path: 'manager',
+                        model: 'Employee',
+                        populate: {
+                            path: 'image_url',
+                            model: 'File',
+                            select: 'path'
+                        },
+                        select: 'image_url name_en name_kh'
+                    },
+                    select: 'title_en title_kh manager'
                 }
             });
 
@@ -854,6 +869,7 @@ exports.createEmployee = async (req, res) => {
             last_name_en,
             first_name_kh,
             last_name_kh,
+            positionId,
             gender,
             phone,
             bloodType,
@@ -919,6 +935,7 @@ exports.createEmployee = async (req, res) => {
             name_en: nameEn,
             name_kh: nameKh,
             gender,
+            positionId,
             phone,
             bloodType,
             email,
@@ -975,6 +992,7 @@ exports.updateEmployee = async (req, res) => {
             last_name_kh,
             gender,
             phone,
+            positionId,
             bloodType,
             email,
             date_of_birth,
@@ -1033,6 +1051,7 @@ exports.updateEmployee = async (req, res) => {
         employee.last_name_kh = last_name_kh;
         employee.gender = gender;
         employee.phone = phone;
+        employee.positionId = positionId;
         employee.bloodType = bloodType;
         employee.email = email;
         employee.id_card_no = id_card_no;
