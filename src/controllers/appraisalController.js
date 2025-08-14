@@ -349,12 +349,70 @@ exports.getAppraisalMonths = async (req, res) => {
             .populate('kpiTemplate', 'name')
             .populate('createdBy', 'username')
             .sort({ updatedAt: -1 });
+
         res.json(getAppraisalMonths);
     } catch (error) {
         console.error('Error:', error.message);
         res.status(500).json({ message: err.message });
     }
 };
+
+exports.getAppraisalActiveMonths = async (req, res) => {
+    try {
+        const { employee } = req.params;
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Get all KPI submissions for this employee
+        const submissions = await KpiSubmissionIndividualEmployeeMonth.find({ employee });
+
+        // Put the matching appraisalMonth IDs into a Set for quick lookup
+        const submittedMonthsSet = new Set(
+            submissions.map(sub => String(sub.appraisalMonth))
+        );
+
+        let getAppraisalMonths = await AppraisalMonth.find()
+            .populate('department', 'title_en title_kh')
+            .populate('kpiTemplate', 'name')
+            .populate('createdBy', 'username')
+            .sort({ updatedAt: -1 });
+
+        const result = getAppraisalMonths
+            .map(item => {
+                if (!item.endDate || item.announcementDay == null) return null;
+
+                const endDate = new Date(item.endDate);
+                endDate.setHours(0, 0, 0, 0);
+
+                const announcementThreshold = new Date(endDate);
+                announcementThreshold.setDate(announcementThreshold.getDate() - item.announcementDay);
+
+                const diffTime = endDate - today;
+                const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                return {
+                    ...item.toObject(),
+                    daysLeft,
+                    announcementThreshold,
+                    show: today >= announcementThreshold,
+                    message: today >= announcementThreshold
+                        ? `បានចាប់ផ្តើមបង្ហាញពីថ្ងៃ ${announcementThreshold.toLocaleDateString()}`
+                        : `មិនទាន់បង្ហាញ (ចាំរយៈពេល ${item.announcementDay} ថ្ងៃមុនថ្ងៃបញ្ចប់)`,
+                    type: submittedMonthsSet.has(String(item._id)),
+                    status: today <= endDate
+                };
+            })
+            .filter(item => item !== null && item.show);
+
+        res.json(result);
+    } catch (error) {
+        console.error('Error:', error.message);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+
 
 exports.getAppraisalMonthsByDepartment = async (req, res) => {
     try {
@@ -409,24 +467,24 @@ exports.getAppraisalMonth = async (req, res) => {
 }
 
 exports.createAppraisalMonth = async (req, res) => {
-    let { startDate, endDate, announcementDay, department, kpiTemplate } = req.body;
+    let { startDate, endDate, announcementDay, kpiTemplate } = req.body;
     console.log(req.body);
 
     try {
-        if (department == 'all') {
-            department = null;
-        }
+        // if (department == 'all') {
+        //     department = null;
+        // }
         if (!startDate || !kpiTemplate) {
             return res.status(400).json({ message: "name field is required" });
         }
 
-        const createAppraisalDay = new AppraisalMonth({ startDate, endDate, announcementDay, department, kpiTemplate, createdBy: req.user.id });
+        const createAppraisalDay = new AppraisalMonth({ startDate, endDate, announcementDay, kpiTemplate, createdBy: req.user.id });
         await createAppraisalDay.save();
         // let getAppraisalDay = await AppraisalMonth.findById(createAppraisalDay._id);
         const populated = await AppraisalMonth.findById(createAppraisalDay._id)
             .populate('kpiTemplate', 'name')
-            .populate('createdBy', 'username')
-            .populate('department', 'title_en title_kh');
+            .populate('createdBy', 'username');
+        // .populate('department', 'title_en title_kh');
 
         res.status(201).json({ message: 'success', data: populated });
     } catch (error) {
@@ -436,23 +494,22 @@ exports.createAppraisalMonth = async (req, res) => {
 }
 exports.updateAppraisalMonth = async (req, res) => {
     const { id } = req.params;
-    let { startDate, endDate, announcementDay, department, kpiTemplate } = req.body;
-    console.log(req.body);
+    let { startDate, endDate, announcementDay, kpiTemplate } = req.body;
 
     try {
-        if (department == 'all') {
-            department = null;
-        }
+        // if (department == 'all') {
+        //     department = null;
+        // }
         let getAppraisalDay = await AppraisalMonth.findById(id);
 
         if (!getAppraisalDay) return res.status(404).json({ message: "Appraisal Day not found" });
 
         let updateAppraisalDay = await AppraisalMonth.findByIdAndUpdate(
             id,
-            { startDate, endDate, announcementDay, department, kpiTemplate, updatedBy: req.user.id },
+            { startDate, endDate, announcementDay, kpiTemplate, updatedBy: req.user.id },
             { new: true }
         )
-            .populate('department', 'title_en title_kh')
+            // .populate('department', 'title_en title_kh')
             .populate('kpiTemplate', 'name')
             .populate('createdBy', 'username');
 

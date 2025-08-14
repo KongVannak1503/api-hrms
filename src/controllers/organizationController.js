@@ -6,11 +6,21 @@ const Organization = require("../models/Organization");
 // Get all 
 exports.getOrganizations = async (req, res) => {
     try {
-        const getOrganizations = await Organization.find().populate('createdBy', 'username');
+        const getOrganizations = await Organization.find().populate('createdBy', 'username').sort({ createdAt: -1 });
         res.json(getOrganizations);
     } catch (error) {
         console.error('Error:', error.message);
         res.status(500).json({ message: err.message });
+    }
+};
+
+exports.getActiveOrganization = async (req, res) => {
+    try {
+        const activeOrganization = await Organization.findOne({ isActive: true }).populate('createdBy', 'username');
+        res.json(activeOrganization);
+    } catch (error) {
+        console.error('Error:', error.message);
+        res.status(500).json({ message: error.message });
     }
 };
 
@@ -27,35 +37,45 @@ exports.getOrganization = async (req, res) => {
 }
 
 exports.createOrganization = async (req, res) => {
-    const { name, email, phone, address, website_name, log, social_media, image_id, isActive } = req.body;
-    const { filename, size, mimetype } = req.file || {};
-    if (!name) {
+    const { fullname, name, email, phone, address, website_name, log, social_media, image_id, isActive } = req.body;
+
+    if (!name || !fullname) {
         return res.status(400).json({ message: "Name field is required" });
     }
     try {
-        // Step 1: Save the file first
+        let document = null;
+
         if (req.file) {
-            const file = new File({
+            const { filename, size, mimetype, originalname } = req.file;
+            const folder = 'organization';
+            document = {
+                name: originalname,
                 filename,
                 size: (size / (1024 * 1024)).toFixed(2) + 'MB',
                 type: mimetype,
-                path: `\\uploads\\${filename}`,
-                createdBy: req.user._id,
-            });
+                path: `uploads/${folder}/${filename}`,
+                createdBy: req.user?._id,
+            };
+        }
 
-            savedFile = await file.save();
+        if (isActive) {
+            await Organization.updateMany(
+                { isActive: true },
+                { $set: { isActive: false } }
+            );
         }
 
         // Step 2: Create organization with file id as image_id
         const createOrganization = new Organization({
             name,
+            fullname,
             email,
             phone,
             address,
             website_name,
             log,
             social_media,
-            image_id: savedFile?._id || null,
+            documents: document,
             isActive,
             createdBy: req.user._id,
         });
@@ -82,34 +102,111 @@ exports.createOrganization = async (req, res) => {
 
 exports.updateOrganization = async (req, res) => {
     const { id } = req.params;
-    const { title, description, isActive } = req.body;
+    const { fullname, name, email, phone, address, website_name, log, social_media, isActive, existingDocumentsJson } = req.body;
+    console.log(req.body);
     try {
-        let getOrganization = await Organization.findById(id);
-        if (!getOrganization) return res.status(404).json({ message: "Organization not found" });
+        let organization = await Organization.findById(id);
+        if (!organization) {
+            return res.status(404).json({ message: "Organization not found" });
+        }
 
-        if (!title) return res.status(400).json({ message: "Title field is required" });
+        if (!name || !fullname) {
+            return res.status(400).json({ message: "Name field is required" });
+        }
 
-        let updateOrganization = await Category.findByIdAndUpdate(
-            id,
-            { title, description, isActive, updatedBy: req.user.id },
-            { new: true }
-        ).populate('createdAt', 'username').populate('updatedBy', 'username');
+        let existingDocument = null;
+        if (existingDocumentsJson) {
+            try {
+                existingDocument = JSON.parse(existingDocumentsJson);
+            } catch (err) {
+                console.warn('Error parsing existingDocumentsJson', err);
+            }
+        }
 
-        res.status(200).json({ message: "success", data: updateOrganization });
+        // Handle file upload
+        if (req.file) {
+            const { filename, size, mimetype, originalname } = req.file;
+            const folder = 'organization'; // keep consistent with createOrganization
+
+            const newDocument = {
+                name: originalname,
+                filename,
+                size: (size / (1024 * 1024)).toFixed(2) + 'MB',
+                type: mimetype,
+                path: `uploads/${folder}/${filename}`,
+                createdBy: req.user?._id,
+                extension: originalname.split('.').pop(),
+            };
+
+            // Delete old file if exists
+            if (organization.documents && organization.documents.path) {
+                const oldPath = path.join(__dirname, '..', organization.documents.path);
+                fs.unlink(oldPath, (err) => {
+                    if (err) console.error('Failed to delete old file:', oldPath, err);
+                });
+            }
+
+            organization.documents = newDocument;
+
+        } else if (existingDocument) {
+            organization.documents = existingDocument;
+        }
+
+        if (isActive) {
+            await Organization.updateMany(
+                { _id: { $ne: id }, isActive: true },
+                { $set: { isActive: false } }
+            );
+        }
+
+
+        // Update other fields
+        organization.fullname = fullname;
+        organization.name = name;
+        organization.email = email;
+        organization.phone = phone;
+        organization.address = address;
+        organization.website_name = website_name;
+        organization.log = log;
+        organization.social_media = social_media;
+        organization.isActive = isActive;
+
+        await organization.save();
+        await organization.populate('createdBy', 'username');
+
+        res.status(200).json({ message: "success", data: organization });
+
     } catch (error) {
-        console.error('Error:', error.message);
+        console.error('Error updating organization:', error.message);
         res.status(500).json({ message: 'Server error' });
     }
-}
+};
 
 exports.deleteOrganization = async (req, res) => {
     const { id } = req.params;
     try {
-        const deleteOrganization = await Category.findByIdAndDelete(id);
-        if (!deleteOrganization) return res.status(404).json({ message: "Organization not found" });
+        const organization = await Organization.findById(id);
+        if (!organization) {
+            return res.status(404).json({ message: "Organization not found" });
+        }
+
+        // Delete image file if exists
+        if (organization.documents && organization.documents.path) {
+            const filePath = path.join(__dirname, '..', organization.documents.path);
+            fs.unlink(filePath, (err) => {
+                if (err) {
+                    console.error('Failed to delete file:', filePath, err);
+                    // You may choose to continue deleting organization even if file deletion fails
+                }
+            });
+        }
+
+        // Delete organization record
+        await Organization.findByIdAndDelete(id);
+
         res.json({ message: "Deleted successfully!" });
     } catch (error) {
         console.error('Error:', error.message);
         res.status(500).json({ message: 'Server error' });
     }
-}
+};

@@ -22,6 +22,7 @@ router.get('/individual/manager/:employee/month/:dayId/form/:templateId', protec
 
 router.get('/month/', protect, appraisalController.getAppraisalMonths);
 router.post('/month/', protect, appraisalController.createAppraisalMonth);
+router.get('/activeMonth/:employee', protect, appraisalController.getAppraisalActiveMonths);
 router.get('/month/:id', protect, appraisalController.getAppraisalMonth);
 router.put('/month/:id', protect, appraisalController.updateAppraisalMonth);
 router.delete('/month/:id', protect, appraisalController.deleteAppraisalMonth);

@@ -816,6 +816,41 @@ exports.getAllEmployees = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+exports.getAllEmployeesNotManager = async (req, res) => {
+    try {
+        const allManagers = await Department.distinct('manager');
+
+        const employees = await Employee.find({
+            _id: { $nin: allManagers }
+        })
+            .populate('image_url')
+            .populate('createdBy', 'username')
+            .populate({
+                path: 'subBonus',
+                model: 'SubBonus',
+                populate: {
+                    path: 'bonusId',
+                    model: 'Bonus',
+                    select: 'payDate'
+                }
+            })
+            .populate({
+                path: 'positionId',
+                model: 'Position',
+                populate: {
+                    path: 'department',
+                    model: 'Department',
+                    select: 'title_en title_kh manager'
+                }
+            })
+            .sort({ updatedAt: -1 });
+
+        res.json(employees);
+    } catch (error) {
+        console.error('Error:', error.message);
+        res.status(500).json({ message: error.message });
+    }
+};
 
 exports.getEmployee = async (req, res) => {
     const { id } = req.params;
