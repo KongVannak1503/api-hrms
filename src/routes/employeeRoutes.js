@@ -97,6 +97,7 @@ router.delete('/bodyBook/:id', protect, protectRoute('delete'), employeeControll
 
 router.get('/', protect, protectRoute('view'), employeeController.getEmployees);
 router.get('/all', protect, protectRoute('view'), employeeController.getAllEmployees);
+router.get('/notManager', protect, protectRoute('view'), employeeController.getAllEmployeesNotManager);
 router.post(
     '/',
     protect,

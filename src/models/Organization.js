@@ -1,9 +1,19 @@
 const mongoose = require('mongoose');
 
+const documentSchema = new mongoose.Schema({
+    name: String,
+    filename: String,
+    type: String,
+    size: String,
+    path: String,
+    extension: String,
+}, { _id: false });
+
 const categorySchema = new mongoose.Schema({
     name: { type: String, required: true },
+    fullname: { type: String, required: true },
     email: { type: String },
-    image_id: { type: Number },
+    documents: documentSchema,
     social_media: { type: String },
     website_name: { type: String },
     phone: { type: String },
