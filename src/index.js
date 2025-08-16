@@ -20,6 +20,7 @@ const educationLevelRoutes = require('./routes/educationLevelRoutes');
 const employeeDocumentRoutes = require('./routes/employeeDocumentRoutes');
 const kpiTemplateRoute = require('./routes/kpiTemplateRoute');
 const payrollRoutes = require('./routes/payrollRoutes');
+const reportRoutes = require('./routes/reportRoutes');
 require('dotenv').config();
 
 dbConnect();
@@ -83,6 +84,7 @@ app.use('/api/appraisals', require('./routes/AppraisalRoutes'));
 
 app.use('/api/applicants', require("./routes/applicantRoutes"));
 app.use('/api/employee-document', employeeDocumentRoutes);
+app.use('/api/reports', reportRoutes);
 app.use('/api/payroll', payrollRoutes);
 app.use('/api/kpi', kpiTemplateRoute);
 app.use('/api/uploads', express.static(path.join(__dirname, 'uploads')));
