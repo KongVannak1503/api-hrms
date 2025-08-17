@@ -224,8 +224,9 @@ exports.updateInterviewDecision = async (req, res) => {
       return res.status(404).json({ message: 'Job Application not found' });
     }
 
-    // Save final decision in interview
+    // ✅ Save final decision AND mark interview as completed
     interview.final_decision = decision;
+    interview.status = 'completed'; // ✅ Add this line
     await interview.save();
 
     return res.status(200).json({
