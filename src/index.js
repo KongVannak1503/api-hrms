@@ -81,6 +81,8 @@ app.use('/api/test-types', require('./routes/testTypeRoutes'));
 // app.use('/api/questions', require('./routes/questionRoutes'));
 app.use('/api/appraisals', require('./routes/AppraisalRoutes'));
 
+app.use('/api/dashboard', require('./routes/dashboardRoutes'));
+
 app.use('/api/applicants', require("./routes/applicantRoutes"));
 app.use('/api/employee-document', employeeDocumentRoutes);
 app.use('/api/payroll', payrollRoutes);

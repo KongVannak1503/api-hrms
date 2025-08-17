@@ -2,6 +2,7 @@ const Applicant = require('../models/Applicant');
 const JobApplication = require('../models/JobApplication');
 const JobPosting = require('../models/JobPosting');
 const TestAssignment = require('../models/TestAssignment');
+const Interview = require('../models/Interview');
 const fs = require('fs');
 const path = require('path');
 
@@ -85,11 +86,28 @@ exports.getAllApplicants = async (req, res) => {
       }
     });
 
+    const interviews = await Interview.find({ applicant_id: { $in: applicantIds } })
+      .sort({ createdAt: -1 }); // latest first
+
+    const interviewMap = new Map();
+
+    interviews.forEach(interview => {
+      const aid = interview.applicant_id.toString();
+      if (!interviewMap.has(aid)) {
+        interviewMap.set(aid, {
+          _id: interview._id,
+          status: interview.status,
+          final_decision: interview.final_decision || null
+        });
+      }
+    });
+
     // 4. Map final response
     const mappedApplicants = applicants.map(applicant => {
       const aid = applicant._id.toString();
       const jobApp = jobAppMap.get(aid);
       const testAssignment = testAssignmentMap.get(aid) || {};
+      const interview = interviewMap.get(aid) || {};
 
       return {
         ...applicant.toObject(),
@@ -98,8 +116,11 @@ exports.getAllApplicants = async (req, res) => {
         status: jobApp?.status || 'applied',
         job_application_id: jobApp?._id || null,
         applied_date: jobApp?.applied_date || null,
-        test_assignment_id: testAssignment._id || null, // ✅ NEW
-        test_assignment_status: testAssignment.status || null
+        test_assignment_id: testAssignment._id || null,
+        test_assignment_status: testAssignment.status || null,
+        interview_id: interview._id || null,
+        interview_status: interview.status || null,
+        interview_final_decision: interview.final_decision || null,
       };
     });
 
