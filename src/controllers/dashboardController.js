@@ -3,15 +3,6 @@ const Department = require('../models/Department');
 const Position = require('../models/Position');
 const Applicant = require('../models/Applicant');
 
-const getEmployeeCount = async (req, res) => {
-  try {
-    const count = await Employee.countDocuments();
-    res.json({ totalEmployees: count });
-  } catch (error) {
-    console.error('Error counting employees:', error);
-    res.status(500).json({ error: 'Failed to count employees' });
-  }
-};
 
 exports.getDashboardStats = async (req, res) => {
   try {
@@ -36,3 +27,43 @@ exports.getDashboardStats = async (req, res) => {
     res.status(500).json({ message: 'Error fetching dashboard data', error: err });
   }
 };
+
+exports.getEmployeesByDepartment = async (req, res) => {
+  try {
+    const employees = await Employee.aggregate([
+      {
+        $lookup: {
+          from: 'positions',
+          localField: 'positionId',
+          foreignField: '_id',
+          as: 'position'
+        }
+      },
+      { $unwind: '$position' },
+      {
+        $lookup: {
+          from: 'departments',
+          localField: 'position.department',
+          foreignField: '_id',
+          as: 'department'
+        }
+      },
+      { $unwind: '$department' },
+      {
+        $group: {
+          _id: '$department._id',
+          departmentName: { $first: '$department.title_en' },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { departmentName: 1 } }
+    ]);
+    console.log(employees);
+
+    res.json(employees);
+  } catch (error) {
+    console.error('Error fetching department employee counts:', error);
+    res.status(500).json({ error: 'Failed to fetch department data' });
+  }
+};
+
