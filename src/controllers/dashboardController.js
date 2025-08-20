@@ -3,6 +3,16 @@ const Department = require('../models/Department');
 const Position = require('../models/Position');
 const Applicant = require('../models/Applicant');
 
+const getEmployeeCount = async (req, res) => {
+  try {
+    const count = await Employee.countDocuments();
+    res.json({ totalEmployees: count });
+  } catch (error) {
+    console.error('Error counting employees:', error);
+    res.status(500).json({ error: 'Failed to count employees' });
+  }
+};
+
 exports.getDashboardStats = async (req, res) => {
   try {
     const totalEmployees = await Employee.countDocuments();

@@ -34,8 +34,8 @@ exports.createJobPosting = async (req, res) => {
 exports.getAllJobPostings = async (req, res) => {
   try {
     const jobs = await JobPosting.find()
-      .populate('department', 'title')
-      .populate('position', 'title')
+      .populate('department', 'title_kh title_en')
+      .populate('position', 'title_kh title_en')
       .populate('job_type', 'title')
       .sort({ createdAt: -1 });
 

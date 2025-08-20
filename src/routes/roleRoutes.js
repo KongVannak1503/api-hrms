@@ -6,9 +6,9 @@ const protectRoute = require('../middleware/protectRouteMiddleware');
 const protectByRoute = require('../middleware/protectByRouteMiddleware');
 
 // Place the specific route before the param route to avoid conflicts
-router.get('/action/:action', protect, roleController.getRolesName);
-router.get('/check/:name', roleController.checkName);
-router.get('/count/:name', roleController.countRoleCount);
+// router.get('/action/:action', protect, roleController.getRolesByRole);
+// router.get('/check/:role', roleController.checkName);
+// router.get('/count/:role', roleController.countRoleCount);
 
 router.get('/', protect, roleController.getRoles);
 router.post('/', protect, protectByRoute('/api/settings', 'create'), roleController.createRole);
