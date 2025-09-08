@@ -5,97 +5,155 @@ require('dotenv').config();
 const Permission = require('../models/Permission');
 const Role = require('../models/Role');
 const User = require('../models/User');
+const Employee = require('../models/Employee');
+const Department = require('../models/Department');
+const Position = require('../models/Position');
 
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/yourdb';
 
 const fullActions = ['view', 'create', 'update', 'delete'];
 
 const allPermissions = [
-    { name: "dashboard", route: "/api/dashboard", actions: ["view"], roles: ["admin", "hr", "manager", "upper manager", "employee"] },
-    { name: "users", route: "/api/users", actions: fullActions, roles: ["admin"] },
-    { name: "roles", route: "/api/roles", actions: fullActions, roles: ["admin"] },
-    { name: "employees", route: "/api/employees", actions: [...fullActions, "profile"], roles: ["admin", "hr", "manager", "upper manager", "employee"] },
-    { name: "recruiting", route: "/api/recruiting", actions: fullActions, roles: ["admin", "hr", "manager", "upper manager"] },
-    { name: "jobs", route: "/api/jobs", actions: fullActions, roles: ["admin", "hr", "manager", "upper manager"] },
-    { name: "job-applications", route: "/api/job-applications", actions: fullActions, roles: ["admin", "hr", "manager", "upper manager"] },
-    { name: "payroll", route: "/api/payroll", actions: fullActions, roles: ["admin", "hr"] },
-    { name: "applicants", route: "/api/applicants", actions: fullActions, roles: ["admin", "hr", "manager", "upper manager"] },
-    { name: "job-postings", route: "/api/job-postings", actions: fullActions, roles: ["admin", "hr", "manager", "upper manager"] },
-    { name: "interview", route: "/api/interview", actions: fullActions, roles: ["admin", "hr", "manager", "upper manager"] },
-    { name: "test-assignments", route: "/api/test-assignments", actions: fullActions, roles: ["admin", "hr", "manager", "upper manager"] },
-    { name: "setting", route: "/api/settings", actions: fullActions, roles: ["admin"] },
+    { name: "admin", route: "/api/admin", actions: ["view"] },
+    { name: "job-postings", route: "/api/job-postings", actions: fullActions },
+    { name: "applicants", route: "/api/applicants", actions: fullActions },
+    { name: "test-schedules", route: "/api/test-schedules", actions: fullActions },
+    { name: "interview-schedules", route: "/api/interview-schedules", actions: fullActions },
+    { name: "employees", route: "/api/employees", actions: [...fullActions, "profile", "employee-information", 'additional-position', 'education', 'employee-history', 'document', 'employee-book', 'contract', 'nssf', 'seniority-payment'] },
+    { name: "seniority-payment", route: "/api/payroll", actions: fullActions },
+    { name: "kpi", route: "/api/kpi", actions: fullActions },
+    { name: "appraisals-employee", route: "/api/appraisals/employee", actions: fullActions },
+    { name: "appraisals", route: "/api/appraisals", actions: fullActions },
+    { name: "reports", route: "/api/reports", actions: ["view", 'export'] },
+    { name: "setting", route: "/api/settings", actions: fullActions },
 ];
 
 async function seed() {
     try {
-        await mongoose.connect(MONGO_URI, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-        });
+        await mongoose.connect(MONGO_URI);
         console.log('✅ Connected to MongoDB');
 
         // Clear existing collections
         await Permission.deleteMany({});
         await Role.deleteMany({});
         await User.deleteMany({});
+        await Employee.deleteMany({});
+        await Department.deleteMany({});
+        await Position.deleteMany({});
         console.log('✅ Cleared existing data');
 
         // Insert permissions
         const permissions = await Permission.insertMany(allPermissions);
         console.log(`✅ Inserted ${permissions.length} permissions`);
 
-        // Role names including 'hr'
-        const roleNames = ['admin', 'hr', 'manager', 'upper manager', 'employee'];
-
-        // Create roles data
-        const rolesData = roleNames.map(roleName => {
-            const allowedPermissions = permissions.filter(p => p.roles.includes(roleName));
-
-            return {
-                name: roleName,
-                role: roleName, // unique string field
-                permissions: allowedPermissions.map(p => {
-                    if (p.name === 'employees') {
-                        if (roleName === 'employee') {
-                            return {
-                                permissionId: p._id,
-                                actions: ['profile'], // only 'profile' for employee
-                                isActive: true,
-                            };
-                        }
-                        return {
-                            permissionId: p._id,
-                            actions: p.actions,
-                            isActive: true,
-                        };
-                    }
-                    return {
-                        permissionId: p._id,
-                        actions: p.actions,
-                        isActive: true,
-                    };
-                }),
-            };
-        });
-
+        // Insert roles
+        const roleNames = ['admin', 'hr'];
+        const rolesData = roleNames.map(roleName => ({
+            role: roleName,
+            permissions: permissions.map(p => ({
+                permissionId: p._id,
+                actions: p.actions,
+                isActive: true,
+            })),
+        }));
         const roles = await Role.insertMany(rolesData);
         console.log(`✅ Inserted ${roles.length} roles`);
 
-        // Find admin role _id
-        const adminRole = roles.find(r => r.name === 'admin');
+        // 1️⃣ Create Multiple Departments
+        const departments = await Department.insertMany([
+            { title_en: 'Administration, Finance and Planning', title_kh: 'រដ្ឋបាល ហិរញ្ញវត្ថុ និងផែនការ', description: 'Handles employee management', isActive: true },
+            { title_en: 'Information Center', title_kh: 'មជ្ឈមណ្ឌលព័ត៌វិទ្យា', description: 'Responsible for IT systems', isActive: true },
+            { title_en: 'International Relations', title_kh: 'ទំនាក់ទំនងអន្ដរជាតិ', description: 'Handles finance and accounting', isActive: true },
+            { title_en: 'Research Center', title_kh: 'មជ្ឈមណ្ឌលស្រាវជ្រាវ', description: 'Handles finance and accounting', isActive: true },
+        ]);
 
-        // Hash admin password
-        const hashedPassword = await bcrypt.hash('admin123', 10);
+        console.log('✅ Departments created:', departments.map(d => d.title_en));
 
-        // Create admin user
+        // 2️⃣ Create Positions linked to Departments
+        const positions = await Position.insertMany([
+            { title_en: 'HR Manager', title_kh: 'អ្នកគ្រប់គ្រងធនធានមនុស្ស', department: departments[0]._id },
+            { title_en: 'IT Manager', title_kh: 'អ្នកគ្រប់គ្រងបច្ចេកវិទ្យា', department: departments[1]._id },
+            { title_en: 'IT Officer', title_kh: 'មន្រ្តីបច្ចេកវិទ្យាព័ត៌មាន', department: departments[1]._id },
+            { title_en: 'International Affairs Officer', title_kh: 'មន្រ្តីទំនាក់ទំនងអន្ដរជាតិ', department: departments[2]._id },
+        ]);
+        console.log('✅ Positions created:', positions.map(p => p.title_en));
+
+        // 3️⃣ Create Employees (Admin + IT Manager + Finance Manager)
+        const employees = await Employee.insertMany([
+            {
+                employee_id: 'EMP1001',
+                first_name_en: 'Kong',
+                last_name_en: 'Vannak',
+                first_name_kh: 'គង់',
+                last_name_kh: 'វណ្ណៈ',
+                name_en: 'Vannak Kong',
+                name_kh: 'គង់ វណ្ណៈ',
+                gender: 'ប្រុស',
+                email: 'admin@gmail.com',
+                phone: '0123456789',
+                bloodType: 'A+',
+                joinDate: new Date(),
+                date_of_birth: new Date(1990, 0, 1),
+                nationality: 'Cambodian',
+                maritalStatus: 'Single',
+                positionId: positions[0]._id, // HR Manager
+                status: '1',
+                isActive: true,
+            },
+            {
+                employee_id: 'EMP2001',
+                first_name_en: 'Chan',
+                last_name_en: 'Dara',
+                name_en: 'Chan Dara',
+                gender: 'ប្រុស',
+                email: 'it.manager@gmail.com',
+                phone: '011223344',
+                joinDate: new Date(),
+                date_of_birth: new Date(1988, 3, 5),
+                nationality: 'Cambodian',
+                maritalStatus: 'Married',
+                positionId: positions[1]._id, // IT Manager
+                status: '1',
+                isActive: true,
+            },
+            {
+                employee_id: 'EMP3001',
+                first_name_en: 'Kim',
+                last_name_en: 'Lina',
+                name_en: 'Kim Lina',
+                gender: 'ស្រី',
+                email: 'finance.manager@gmail.com',
+                phone: '099887766',
+                joinDate: new Date(),
+                date_of_birth: new Date(1992, 6, 12),
+                nationality: 'Cambodian',
+                maritalStatus: 'Single',
+                positionId: positions[2]._id, // Finance Manager
+                status: '1',
+                isActive: true,
+            },
+        ]);
+        console.log('✅ Employees created:', employees.map(e => e.name_en));
+
+        // 4️⃣ Update Departments with manager + employees
+        await Department.findByIdAndUpdate(departments[0]._id, {
+            $push: { manager: employees[0]._id, employee: employees[0]._id }
+        });
+        console.log('✅ Departments updated with managers and employees');
+
+        // 5️⃣ Create Admin User linked to HR Manager (Vannak)
+        const adminRole = roles.find(r => r.role === 'admin');
+
         const adminUser = await User.create({
             username: 'admin',
             email: 'admin@example.com',
-            password: "admin123",
+            password: '123', // ⚠️ you might want bcrypt.hash here
             role: adminRole._id,
+            employeeId: employees[0]._id,
             isActive: true,
         });
-        console.log('✅ Admin user created:', adminUser.username);
+
+        console.log('✅ Admin user created with employeeId:', adminUser.employeeId.toString());
 
     } catch (err) {
         console.error('❌ Error during seeding:', err);

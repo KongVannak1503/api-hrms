@@ -48,7 +48,6 @@ router.post(
     employeeController.createEmployeePosition
 );
 
-
 router.put('/position/:id',
     (req, res, next) => dynamicUploader(fieldName = 'file', folder = 'positions')(req, res, next),
     employeeController.updateEmployeePosition);
@@ -98,6 +97,7 @@ router.delete('/bodyBook/:id', protect, protectRoute('delete'), employeeControll
 router.get('/', protect, protectRoute('view'), employeeController.getEmployees);
 router.get('/all', protect, protectRoute('view'), employeeController.getAllEmployees);
 router.get('/notManager', protect, protectRoute('view'), employeeController.getAllEmployeesNotManager);
+router.get('/forManager', protect, protectRoute('view'), employeeController.getEmployeesForManager);
 router.post(
     '/',
     protect,

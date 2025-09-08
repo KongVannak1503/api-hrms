@@ -11,7 +11,7 @@ const protectByRoute = require('../middleware/protectByRouteMiddleware');
 // router.get('/count/:role', roleController.countRoleCount);
 
 router.get('/', protect, roleController.getRoles);
-router.post('/', protect, protectByRoute('/api/settings', 'create'), roleController.createRole);
+router.post('/', protect, roleController.createRole);
 router.get('/:id', protect, roleController.getRoleById);
 router.put('/:id', protect, roleController.updateRole);
 router.delete('/:id', protect, protectByRoute('/api/settings', 'delete'), roleController.deleteRole);

@@ -852,6 +852,60 @@ exports.getAllEmployeesNotManager = async (req, res) => {
     }
 };
 
+exports.getEmployeesForManager = async (req, res) => {
+    try {
+        const managerEmployeeId = req.user.employeeId; // logged-in manager's employee ID
+
+        // 1️⃣ Find departments managed by this manager
+        const managedDepartments = await Department.find(
+            { manager: managerEmployeeId },
+            '_id'
+        );
+
+        const deptIds = managedDepartments.map(d => d._id.toString());
+        console.log('Departments managed by manager:', deptIds);
+
+        if (!deptIds.length) return res.json([]);
+
+        // 2️⃣ Find all employees except the manager
+        const employees = await Employee.find({ _id: { $ne: managerEmployeeId } })
+            .populate('image_url')
+            .populate('createdBy', 'username')
+            .populate({
+                path: 'subBonus',
+                populate: { path: 'bonusId', select: 'payDate' }
+            })
+            .populate({
+                path: 'positionId',
+                populate: {
+                    path: 'department',
+                    select: '_id title_en title_kh manager'
+                }
+            })
+            .sort({ updatedAt: -1 });
+
+        // 3️⃣ Filter employees whose any department is managed by this manager
+        const filteredEmployees = employees.filter(emp => {
+            const depts = emp.positionId?.department;
+            if (!depts) return false; // no department
+            // ensure depts is always array
+            const deptArray = Array.isArray(depts) ? depts : [depts];
+            return deptArray.some(d => deptIds.includes(d._id.toString()));
+        });
+
+        console.log('Employees:', filteredEmployees);
+        res.json(filteredEmployees);
+
+    } catch (error) {
+        console.error('Error:', error.message);
+        res.status(500).json({ message: error.message });
+    }
+};
+
+
+
+
+
 exports.getEmployee = async (req, res) => {
     const { id } = req.params;
     try {
@@ -1451,9 +1505,7 @@ exports.getEmployeesByManager = async (req, res) => {
         const userId = req.user._id;
 
         // Find departments where user is one of the managers
-        const managedDepartments = await Department.find({ manager: '687f344440177054ef17bc0b' }).select('_id');
-
-        console.log(managedDepartments);
+        const managedDepartments = await Department.find({ manager: userId }).select('_id');
         const departmentIds = managedDepartments.map(dep => dep._id);
 
         if (departmentIds.length === 0) {

@@ -40,6 +40,40 @@ exports.getAllEmployeesWithManager = async (req, res) => {
     }
 };
 
+exports.getEmployeeGenderStats = async (req, res) => {
+    try {
+        const stats = await Employee.aggregate([
+            {
+                $group: {
+                    _id: "$gender", // Group by gender
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        // Prepare response
+        let maleCount = 0;
+        let femaleCount = 0;
+        let total = 0;
+
+        stats.forEach(item => {
+            if (item._id === "ប្រុស") maleCount = item.count;
+            if (item._id === "ស្រី") femaleCount = item.count;
+            total += item.count;
+        });
+
+        res.json({
+            male: maleCount,
+            female: femaleCount,
+            total: total
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Server Error" });
+    }
+};
+
+
 // Get all applicants (enhanced with job title and status)
 exports.getAllApplicants = async (req, res) => {
     try {

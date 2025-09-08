@@ -11,6 +11,7 @@ router.post('/', protect, protectByRoute('/api/settings', 'create'), departmentC
 router.get('/:id', protect, departmentController.getDepartment);
 router.put('/:id', protect, protectByRoute('/api/settings', 'update'), departmentController.updateDepartment);
 router.put('/assignee/:id', protect, protectByRoute('/api/settings', 'update'), departmentController.assignManager);
+router.put('/employee/:employeeId', protect, departmentController.findByEmployee);
 router.delete('/:id', protect, protectByRoute('/api/settings', 'delete'), departmentController.deleteDepartment);
 
 module.exports = router;

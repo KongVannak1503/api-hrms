@@ -7,6 +7,7 @@ const protectByRoute = require('../middleware/protectByRouteMiddleware');
 
 router.get('/', protect, reportController.getAllEmployeesWithManager);
 router.get('/recruitment', protect, reportController.getAllApplicants);
+router.get('/employee-gender', protect, reportController.getEmployeeGenderStats);
 // router.post('/', protect, protectByRoute('/api/settings', 'create'), reportController.createCity);
 // router.get('/:id', protect, reportController.getCity);
 // router.put('/:id', protect, protectByRoute('/api/settings', 'update'), reportController.updateCity);

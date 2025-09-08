@@ -366,6 +366,7 @@ exports.getAppraisalActiveMonths = async (req, res) => {
 
         // Get all KPI submissions for this employee
         const submissions = await KpiSubmissionIndividualEmployeeMonth.find({ employee });
+        const submissionsManager = await KpiSubmissionIndividualManagerMonth.find({ employee });
 
         // Put the matching appraisalMonth IDs into a Set for quick lookup
         const submittedMonthsSet = new Set(
@@ -391,6 +392,22 @@ exports.getAppraisalActiveMonths = async (req, res) => {
                 const diffTime = endDate - today;
                 const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
+                // employee submission for this month
+                const employeeSubmission = submissions.find(
+                    sub => String(sub.appraisalMonth) === String(item._id)
+                );
+                const employeeScoreSum = employeeSubmission
+                    ? employeeSubmission.scores.reduce((sum, s) => sum + (s.score || 0), 0)
+                    : 0;
+
+                // manager submission for this month
+                const managerSubmission = submissionsManager.find(
+                    sub => String(sub.appraisalMonth) === String(item._id)
+                );
+                const managerScoreSum = managerSubmission
+                    ? managerSubmission.scores.reduce((sum, s) => sum + (s.score || 0), 0)
+                    : 0;
+
                 return {
                     ...item.toObject(),
                     daysLeft,
@@ -400,10 +417,15 @@ exports.getAppraisalActiveMonths = async (req, res) => {
                         ? `បានចាប់ផ្តើមបង្ហាញពីថ្ងៃ ${announcementThreshold.toLocaleDateString()}`
                         : `មិនទាន់បង្ហាញ (ចាំរយៈពេល ${item.announcementDay} ថ្ងៃមុនថ្ងៃបញ្ចប់)`,
                     type: submittedMonthsSet.has(String(item._id)),
-                    status: today <= endDate
+                    status: today <= endDate,
+
+                    // 👇 sum of scores instead of count
+                    employeeScoreSum,
+                    managerScoreSum
                 };
             })
             .filter(item => item !== null && item.show);
+        console.log(result);
 
         res.json(result);
     } catch (error) {
@@ -411,6 +433,7 @@ exports.getAppraisalActiveMonths = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
 
 
 
@@ -467,7 +490,7 @@ exports.getAppraisalMonth = async (req, res) => {
 }
 
 exports.createAppraisalMonth = async (req, res) => {
-    let { startDate, endDate, announcementDay, kpiTemplate } = req.body;
+    let { name, startDate, endDate, announcementDay, kpiTemplate } = req.body;
     console.log(req.body);
 
     try {
@@ -478,7 +501,7 @@ exports.createAppraisalMonth = async (req, res) => {
             return res.status(400).json({ message: "name field is required" });
         }
 
-        const createAppraisalDay = new AppraisalMonth({ startDate, endDate, announcementDay, kpiTemplate, createdBy: req.user.id });
+        const createAppraisalDay = new AppraisalMonth({ name, startDate, endDate, announcementDay, kpiTemplate, createdBy: req.user.id });
         await createAppraisalDay.save();
         // let getAppraisalDay = await AppraisalMonth.findById(createAppraisalDay._id);
         const populated = await AppraisalMonth.findById(createAppraisalDay._id)
@@ -494,7 +517,7 @@ exports.createAppraisalMonth = async (req, res) => {
 }
 exports.updateAppraisalMonth = async (req, res) => {
     const { id } = req.params;
-    let { startDate, endDate, announcementDay, kpiTemplate } = req.body;
+    let { name, startDate, endDate, announcementDay, kpiTemplate } = req.body;
 
     try {
         // if (department == 'all') {
@@ -506,7 +529,7 @@ exports.updateAppraisalMonth = async (req, res) => {
 
         let updateAppraisalDay = await AppraisalMonth.findByIdAndUpdate(
             id,
-            { startDate, endDate, announcementDay, kpiTemplate, updatedBy: req.user.id },
+            { name, startDate, endDate, announcementDay, kpiTemplate, updatedBy: req.user.id },
             { new: true }
         )
             // .populate('department', 'title_en title_kh')

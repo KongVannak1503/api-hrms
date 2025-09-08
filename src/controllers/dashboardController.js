@@ -58,7 +58,6 @@ exports.getEmployeesByDepartment = async (req, res) => {
       },
       { $sort: { departmentName: 1 } }
     ]);
-    console.log(employees);
 
     res.json(employees);
   } catch (error) {

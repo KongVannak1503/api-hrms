@@ -163,3 +163,23 @@ exports.assignManager = async (req, res) => {
         res.status(500).json({ message: error.message || 'Server error' });
     }
 };
+
+exports.findByEmployee = async (req, res) => {
+    try {
+        const { employeeId } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(employeeId)) {
+            return res.status(400).json({ message: "Invalid employeeId" });
+        }
+        const department = await Department.findOne({ manager: employeeId });
+
+        if (!department) {
+            return res.json({ status: false });
+        }
+
+        return res.json({ status: true });
+    } catch (error) {
+        console.error("Error finding department by employee:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};

@@ -28,7 +28,15 @@ exports.getUser = async (req, res) => {
                 },
                 select: 'name name_kh image_url',
             })
-            .populate('role', 'name').select('-password');
+            .populate({
+                path: 'role',
+                populate: {
+                    path: 'permissions.permissionId',
+                    model: 'Permission',
+                    select: 'name',
+                }
+            })
+            .select('-password');
         res.json(getUsers);
     } catch (err) {
         res.status(500).json({ message: err.message });

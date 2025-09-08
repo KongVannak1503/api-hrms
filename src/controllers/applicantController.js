@@ -131,6 +131,20 @@ exports.getAllApplicants = async (req, res) => {
   }
 };
 
+exports.getFiveApplicant = async (req, res) => {
+  try {
+    const applicants = await JobApplication.find()
+      .populate('job_id', 'job_title')
+      .populate('applicant_id', 'full_name_kh full_name_en photo')
+      .sort({ createdAt: -1 })
+      .limit(5);
+
+    res.status(200).json(applicants);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch applicant', error: err.message });
+  }
+}
+
 // Get single applicant by ID (unchanged)
 exports.getApplicantById = async (req, res) => {
   try {

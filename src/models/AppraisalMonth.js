@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 
 const AppraisalMonthSchema = new mongoose.Schema({
+    name: { type: String, required: true },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
     announcementDay: { type: Number, required: true },
