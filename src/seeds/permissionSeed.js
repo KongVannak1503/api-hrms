@@ -105,6 +105,9 @@ async function seed() {
                 first_name_en: 'Chan',
                 last_name_en: 'Dara',
                 name_en: 'Chan Dara',
+                first_name_kh: 'ចាន់',
+                last_name_kh: 'ដារា',
+                name_kh: 'ចាន់​ ដារា',
                 gender: 'ប្រុស',
                 email: 'it.manager@gmail.com',
                 phone: '011223344',
@@ -121,6 +124,9 @@ async function seed() {
                 first_name_en: 'Kim',
                 last_name_en: 'Lina',
                 name_en: 'Kim Lina',
+                first_name_en: 'គីម',
+                last_name_en: 'លីណា',
+                name_en: 'គីម​ លីណា',
                 gender: 'ស្រី',
                 email: 'finance.manager@gmail.com',
                 phone: '099887766',
@@ -147,7 +153,7 @@ async function seed() {
         const adminUser = await User.create({
             username: 'admin',
             email: 'admin@example.com',
-            password: '123', // ⚠️ you might want bcrypt.hash here
+            password: 'admin123',
             role: adminRole._id,
             employeeId: employees[0]._id,
             isActive: true,
