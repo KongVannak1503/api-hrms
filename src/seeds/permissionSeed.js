@@ -22,6 +22,7 @@ const allPermissions = [
     { name: "employees", route: "/api/employees", actions: [...fullActions, "profile", "employee-information", 'additional-position', 'education', 'employee-history', 'document', 'employee-book', 'contract', 'nssf', 'seniority-payment'] },
     { name: "seniority-payment", route: "/api/payroll", actions: fullActions },
     { name: "kpi", route: "/api/kpi", actions: fullActions },
+    { name: "appraisal-recently", route: "/api/appraisal-recently", actions: fullActions },
     { name: "appraisals-employee", route: "/api/appraisals/employee", actions: fullActions },
     { name: "appraisals", route: "/api/appraisals", actions: fullActions },
     { name: "reports", route: "/api/reports", actions: ["view", 'export'] },
