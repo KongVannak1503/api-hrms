@@ -9,6 +9,7 @@ const protectByRoute = require('../middleware/protectByRouteMiddleware');
 // router.get('/check/:name', positionController.checkName);
 
 router.get('/', protect, protectByRoute('/api/settings', 'view'), positionController.getPositions);
+router.get('/view', protect, positionController.getPositions);
 router.post('/', protect, protectByRoute('/api/settings', 'create'), positionController.createPosition);
 router.get('/:id', protect, positionController.getPosition);
 router.get('/by-department/:departmentId', protect, protectByRoute('/api/settings', 'view'), positionController.getPositionsByDepartment);

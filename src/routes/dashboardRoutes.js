@@ -5,5 +5,6 @@ const { protect } = require('../middleware/authMiddleware');
 
 router.get('/', protect, dashboardController.getDashboardStats);
 router.get('/department-chart', protect, dashboardController.getEmployeesByDepartment);
+router.get('/recently-appraisal', protect, dashboardController.getRecentlyAppraisal);
 
 module.exports = router;

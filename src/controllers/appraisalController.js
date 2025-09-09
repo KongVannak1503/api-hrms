@@ -434,6 +434,95 @@ exports.getAppraisalActiveMonths = async (req, res) => {
     }
 };
 
+exports.getAppraisalActiveRecentlyMonths = async (req, res) => {
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Get all submissions
+        const employeeSubs = await KpiSubmissionIndividualEmployeeMonth.find()
+            .populate('employee', 'name_kh name_en');
+
+        const managerSubs = await KpiSubmissionIndividualManagerMonth.find(); // assuming manager field exists
+
+        const appraisalMonths = await AppraisalMonth.find()
+            .populate('department', 'title_en title_kh')
+            .populate('kpiTemplate', 'name')
+            .populate('createdBy', 'username')
+            .sort({ updatedAt: -1 });
+
+        const result = [];
+
+        for (const month of appraisalMonths) {
+            if (!month.endDate || month.announcementDay == null) continue;
+
+            const endDate = new Date(month.endDate);
+            endDate.setHours(0, 0, 0, 0);
+
+            const announcementThreshold = new Date(endDate);
+            announcementThreshold.setDate(announcementThreshold.getDate() - month.announcementDay);
+
+            const daysLeft = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
+
+            // Employee submissions for this month
+            const monthEmployeeSubs = employeeSubs.filter(
+                sub => String(sub.appraisalMonth) === String(month._id)
+            );
+
+            // Manager submissions for this month
+            const monthManagerSubs = managerSubs.filter(
+                sub => String(sub.appraisalMonth) === String(month._id)
+            );
+
+            monthEmployeeSubs.forEach(sub => {
+                const employeeTotalScore = sub.scores.reduce((sum, s) => sum + (s.score || 0), 0);
+
+                // Find manager submission for same employee
+                const managerSub = monthManagerSubs.find(
+                    mSub => String(mSub.employee) === String(sub.employee?._id)
+                );
+                const managerTotalScore = managerSub
+                    ? managerSub.scores.reduce((sum, s) => sum + (s.score || 0), 0)
+                    : 0;
+
+                result.push({
+                    appraisalMonthId: month._id,
+                    appraisalMonthName: month.name,
+                    department: month.department,
+                    kpiTemplate: month.kpiTemplate,
+                    createdBy: month.createdBy,
+                    startDate: month.startDate,
+                    endDate: month.endDate,
+                    daysLeft,
+                    announcementThreshold,
+                    show: today >= announcementThreshold,
+                    message:
+                        today >= announcementThreshold
+                            ? `បានចាប់ផ្តើមបង្ហាញពីថ្ងៃ ${announcementThreshold.toLocaleDateString()}`
+                            : `មិនទាន់បង្ហាញ (ចាំរយៈពេល ${month.announcementDay} ថ្ងៃមុនថ្ងៃបញ្ចប់)`,
+                    status: today <= endDate,
+                    employee: {
+                        id: sub.employee?._id,
+                        name_kh: sub.employee?.name_kh,
+                        name_en: sub.employee?.name_en,
+                        createdAt: sub.createdAt,
+                    },
+                    employeeScoreSum: employeeTotalScore, // ✅ sum only for this submission
+                    managerScoreSum: managerTotalScore,   // ✅ sum only for this submission
+                });
+            })
+        }
+        const filteredResult = result.filter(
+            item => item !== null && item.status && item.employeeScoreSum > 0
+        );
+        console.log(filteredResult)
+        res.json(filteredResult);
+    } catch (error) {
+        console.error('Error:', error.message);
+        res.status(500).json({ message: error.message });
+    }
+};
+
 
 
 
