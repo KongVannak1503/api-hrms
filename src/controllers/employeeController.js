@@ -291,9 +291,11 @@ exports.getEmployeeNssf = async (req, res) => {
 exports.uploadNssf = async (req, res) => {
     try {
         const { employeeId } = req.params;
-        const uploadedFiles = req.files;
+        const uploadedFiles = req.files?.documents || [];
         const { title, claimTitle, claimDate, claimType, claimOther } = req.body;
         // ✅ Always save NSSF record first
+        console.log(uploadedFiles);
+
         const nssfRecord = new EmpNssf({
             employeeId,
             claimTitle,
@@ -303,30 +305,32 @@ exports.uploadNssf = async (req, res) => {
             createdBy: req.user?._id,
         });
 
-        await nssfRecord.save();
-
+        if (claimDate || claimTitle || claimDate || claimOther) {
+            await nssfRecord.save();
+        }
         const savedFiles = [];
 
         // ✅ If files are present, save them
-        if (uploadedFiles && uploadedFiles.length > 0) {
+
+        if (uploadedFiles.length > 0) {
             for (const file of uploadedFiles) {
                 const fixedName = iconv.decode(Buffer.from(file.originalname, 'latin1'), 'utf8');
                 const newFile = new EmpNssfDoc({
-                    title: title,
+                    title,
                     name: fixedName,
                     filename: file.filename,
                     type: file.mimetype,
                     size: (file.size / (1024 * 1024)).toFixed(2) + 'MB',
                     path: `uploads/documents/${file.filename}`,
-                    employeeId,
-                    nssfId: nssfRecord._id, // ✅ link to the NSSF record
+                    employeeId,                  // ✅ links to Employee
                     createdBy: req.user?._id,
                 });
-
                 await newFile.save();
                 savedFiles.push(newFile);
             }
         }
+
+
 
         res.status(200).json({
             message: 'Claim created successfully',
@@ -429,6 +433,20 @@ exports.getEmployeeLaborLaw = async (req, res) => {
         const { employeeId } = req.params;
 
         const documents = await EmployeeLaborLaw.find({ employeeId })
+            .populate('createdBy', 'username')
+            .sort({ createdAt: -1 });
+        res.json(documents);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
+exports.getEmployeeLaborLawView = async (req, res) => {
+    try {
+        const { employeeId } = req.params;
+
+        const documents = await EmployeeLaborLaw.find({ employeeId })
+            .populate('position', 'title_en title_kh')
             .populate('createdBy', 'username')
             .sort({ createdAt: -1 });
         res.json(documents);

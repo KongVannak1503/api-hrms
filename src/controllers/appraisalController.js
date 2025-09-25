@@ -441,7 +441,7 @@ exports.getAppraisalActiveRecentlyMonths = async (req, res) => {
 
         // Get all submissions
         const employeeSubs = await KpiSubmissionIndividualEmployeeMonth.find()
-            .populate('employee', 'name_kh name_en');
+            .populate('employee', 'name_kh name_en email phone gender');
 
         const managerSubs = await KpiSubmissionIndividualManagerMonth.find(); // assuming manager field exists
 
@@ -505,15 +505,18 @@ exports.getAppraisalActiveRecentlyMonths = async (req, res) => {
                         id: sub.employee?._id,
                         name_kh: sub.employee?.name_kh,
                         name_en: sub.employee?.name_en,
+                        email: sub.employee?.email,
+                        phone: sub.employee?.phone,
+                        gender: sub.employee?.gender,
                         createdAt: sub.createdAt,
                     },
-                    employeeScoreSum: employeeTotalScore, // ✅ sum only for this submission
-                    managerScoreSum: managerTotalScore,   // ✅ sum only for this submission
+                    employeeScoreSum: employeeTotalScore,
+                    managerScoreSum: managerTotalScore,
                 });
             })
         }
         const filteredResult = result.filter(
-            item => item !== null && item.status && item.employeeScoreSum > 0
+            item => item !== null && item.employeeScoreSum > 0
         );
         console.log(filteredResult)
         res.json(filteredResult);

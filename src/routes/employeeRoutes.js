@@ -62,6 +62,7 @@ router.post(
 );
 router.delete('/laborLaw/:id', protect, protectRoute('delete'), employeeController.deleteLaborLaw);
 router.get('/laborLaw/:employeeId', protect, protectRoute('view'), employeeController.getEmployeeLaborLaw);
+router.get('/laborLaw-view/:employeeId', protect, protectRoute('view'), employeeController.getEmployeeLaborLawView);
 // NSSF
 
 router.post(
