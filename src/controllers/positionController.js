@@ -55,7 +55,7 @@ exports.createPosition = async (req, res) => {
             createdBy: req.user.id,
         });
         await newPosition.save();
-        await newPosition.populate('department', 'title');
+        await newPosition.populate('department', 'title_en title_kh');
         await newPosition.populate('createdBy', 'username');
 
         res.status(201).json({ message: 'success', data: newPosition });
@@ -85,7 +85,7 @@ exports.updatePosition = async (req, res) => {
                 updatedBy: req.user.id
             },
             { new: true }
-        ).populate('department', 'title')
+        ).populate('department', 'title_en title_kh')
             .populate('updatedBy', 'username');
 
         res.status(200).json({ message: "success", data: updated });
