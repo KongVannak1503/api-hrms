@@ -6,7 +6,7 @@ exports.getUsers = async (req, res) => {
     try {
 
         const getUsers = await User.find()
-            .populate('role', 'name')
+            .populate('role', 'role')
             .populate('createdBy', 'username')
             .select('-password').sort({ updatedAt: -1 });
         res.json(getUsers);
@@ -93,7 +93,7 @@ exports.updateUser = async (req, res) => {
             id,
             { username, employeeId, password: updatedPassword, role, isActive, updatedBy: req.user.id, },
             { new: true }
-        ).populate('role', 'name').select('-password');
+        ).populate('role', 'role').select('-password');
 
         res.status(200).json({ message: "User updated successfully", data: user });
     } catch (error) {

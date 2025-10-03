@@ -7,8 +7,10 @@ const TestAssignment = require('../models/TestAssignment');
 exports.getAllEmployeesWithManager = async (req, res) => {
     try {
         const getEmployees = await Employee.find()
-            .select('_id employee_id name_kh email phone joinDate status positionId gender')
+            .select('_id employee_id name_kh city email phone joinDate status positionId gender date_of_birth nationality maritalStatus bloodType commune district id_card_no passport_no present_commune present_district present_village village present_city')
             .populate('createdBy', 'username')
+            .populate('city', 'name')
+            .populate('present_city', 'name')
             .populate({
                 path: 'subBonus',
                 model: 'SubBonus',

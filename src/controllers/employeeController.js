@@ -607,6 +607,8 @@ exports.uploadBooks = async (req, res) => {
     try {
         const { employeeId } = req.params;
         const { healthTitle, healthDate, bodyTitle, bodyDate, bookTitle, bookDate, bookEndDate, post } = req.body;
+        console.log(req.body);
+
         const uploadedFiles = req.files;
         const isPosted = post === 'true';
         const savedFiles = [];
@@ -614,7 +616,7 @@ exports.uploadBooks = async (req, res) => {
         await Employee.findByIdAndUpdate(employeeId, { post: isPosted });
 
         // Helper to process each section
-        const processFiles = async (files, Model, title, date) => {
+        const processFiles = async (files, Model, title, date, endDate) => {
             if (!files) return;
 
             for (const file of files) {
@@ -629,7 +631,8 @@ exports.uploadBooks = async (req, res) => {
                     path: `uploads/documents/${file.filename}`,
                     extension: file.originalname.split('.').pop(),
                     start_date: date ? new Date(date) : null,
-                    end_date: bookEndDate ? new Date(bookEndDate) : undefined,
+                    // end_date: bookEndDate ? new Date(bookEndDate) : null,
+                    end_date: endDate ? new Date(endDate) : null,
                     employeeId,
                     createdBy: req.user?._id,
                 });
@@ -643,7 +646,8 @@ exports.uploadBooks = async (req, res) => {
         await processFiles(uploadedFiles.bodyFiles, EmpBodyBook, bodyTitle, bodyDate);
         await processFiles(uploadedFiles.bookFiles, EmpBook, bookTitle, bookDate, bookEndDate);
 
-        // ✅ Return success even if no files, but post is updated
+        // ✅ Return success even if no files, but post is updated;
+
         return res.status(200).json({
             message: savedFiles.length > 0
                 ? 'Files uploaded and employee updated successfully'
