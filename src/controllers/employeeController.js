@@ -233,6 +233,7 @@ exports.updateEmployeePosition = async (req, res) => {
 };
 exports.deleteEmployeePosition = async (req, res) => {
     const { id } = req.params;
+    console.log(id);
 
     try {
         const document = await EmpPosition.findById(id);
@@ -240,13 +241,15 @@ exports.deleteEmployeePosition = async (req, res) => {
             return res.status(404).json({ message: "Document not found" });
         }
 
-        // Delete the file from the filesystem
-        const filePath = path.join(__dirname, '..', document.path);
-        fs.unlink(filePath, (err) => {
-            if (err) {
-                console.warn('File not found or already deleted:', document.path);
-            }
-        });
+        // Delete the file from the filesystem if it exists
+        if (document.documents && document.documents.path) {
+            const filePath = path.join(__dirname, '..', document.documents.path);
+            fs.unlink(filePath, (err) => {
+                if (err) {
+                    console.warn('File not found or already deleted:', document.documents.path);
+                }
+            });
+        }
 
         // Delete from DB
         await EmpPosition.findByIdAndDelete(id);

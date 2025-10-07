@@ -610,6 +610,7 @@ exports.createAppraisalMonth = async (req, res) => {
 exports.updateAppraisalMonth = async (req, res) => {
     const { id } = req.params;
     let { name, startDate, endDate, announcementDay, kpiTemplate } = req.body;
+    console.log(req.body);
 
     try {
         // if (department == 'all') {

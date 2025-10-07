@@ -40,6 +40,7 @@ router.post(
 router.delete('/upload/:id', protect, protectRoute('delete'), employeeController.deleteDocument);
 // Position
 router.get('/position/:employeeId', protect, protectRoute('view'), employeeController.getEmployeePositions);
+router.delete('/position/:id', protect, protectRoute('delete'), employeeController.deleteEmployeePosition);
 
 router.post(
     '/position/:employeeId',
